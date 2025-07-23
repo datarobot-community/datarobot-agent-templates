@@ -1,0 +1,10 @@
+[project]
+name = "datarobot-agents-templates"
+version = "1.0.0"
+description = """
+This is a template for DataRobot Agents.
+"""
+requires-python = ">=3.10"
+
+dependencies = [
+]

@@ -1,0 +1,66 @@
+---
+# https://taskfile.dev
+version: '3'
+env:
+  ENV: testing
+dotenv: ['.env', '.env.{{.ENV}}']
+tasks:
+  default:
+    desc: "Show all available tasks"
+    cmds:
+      - task --list
+    silent: true
+  req:
+    desc: "Install dependencies for all agent components and infra"
+    cmds:
+      - echo "Updating api test dependencies"
+      - uv sync --all-extras
+    silent: true
+  lint:
+    desc: 🧹 Lint api tests
+    cmds:
+      - task: req
+      - echo "Linting api test"
+      - uv run ruff check . --fix
+      - uv run ruff format .
+      - uv run mypy --pretty .
+    silent: true
+  lint-check:
+    desc: ✅ Check lint for api tests
+    cmds:
+      - task: req
+      - echo "Checking linting"
+      - uv run ruff format --check --diff .
+      - uv run ruff check --diff .
+      - uv run mypy --pretty .
+    silent: true
+  all:
+    desc: "🧪 Run all API tests"
+    cmds:
+      - echo "Running all tests"
+      - uv run pytest -vv -s ./api_tests/
+    silent: true
+  base:
+    desc: "🤖 Run base agent API tests"
+    cmds:
+      - echo "Running base agent tests"
+      - uv run pytest -vv -s -k "test_agent_e2e[agent_generic_base-2]"
+    silent: true
+  crewai:
+    desc: "👥 Run crewai agent API tests"
+    cmds:
+      - echo "Running crewai agent tests"
+      - uv run pytest -vv -s -k "test_agent_e2e[agent_crewai-1]"
+    silent: true
+  langgraph:
+    desc: "🔄 Run langgraph agent API tests"
+    cmds:
+      - echo "Running langgraph agent tests"
+      - uv run pytest -vv -s -k "test_agent_e2e[agent_langgraph-3]"
+    silent: true
+  llamaindex:
+    desc: "🦙 Run llamaindex agent API tests"
+    cmds:
+      - echo "Running llamaindex agent tests"
+      - uv run pytest -vv -s -k "test_agent_e2e[agent_llamaindex-4]"
+    silent: true

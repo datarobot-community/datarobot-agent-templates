@@ -1,0 +1,71 @@
+---
+name: Python Infra Checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  python-checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Ref: https://docs.astral.sh/uv/guides/integration/github/#installation
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          working-directory: infra
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        working-directory: infra
+        run: uv sync --all-extras --all-groups --dev
+
+      - name: Run Static Checks
+        working-directory: infra
+        run: |
+          uv run ruff format --check .
+          uv run ruff check .
+          uv run mypy --pretty .
+
+  python-unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Ref: https://docs.astral.sh/uv/guides/integration/github/#installation
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          working-directory: infra
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        working-directory: infra
+        run: uv sync --all-extras --all-groups --dev
+
+      - name: Run Static Checks
+        working-directory: infra
+        run: |
+          export PULUMI_CONFIG_PASSPHRASE=123
+          pulumi login --local
+          pulumi stack init -s organization/datarobot-agent-templates/unittest
+          uv run pytest -vv --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml ./tests/

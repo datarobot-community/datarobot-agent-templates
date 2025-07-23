@@ -1,0 +1,60 @@
+---
+# https://taskfile.dev
+version: '3'
+includes:
+  agent:
+    taskfile: ./agent_llamaindex/Taskfile.yml
+    dir: ./agent_llamaindex
+tasks:
+  default:
+    desc: "🗒️ Show all available tasks"
+    cmds:
+      - task --list
+    silent: true
+  install:
+    desc: "🏗️ Install and setup the agent and infra environments"
+    cmds:
+      - echo "Updating agent environment"
+      - task: agent:req
+      - echo "Updating infra environment"
+      - cd ./infra && uv sync --all-extras
+    silent: true
+    aliases:
+      - setup
+      - req
+  build:
+    desc: "🔵 [agent_llamaindex] Run Pulumi up in [BUILD] mode"
+    env:
+      AGENT_DEPLOY: 0
+    cmds:
+      - echo "Running pulumi up with [BUILD] mode"
+      - cd ./infra && pulumi up
+    silent: true
+  deploy:
+    desc: "🟢 [agent_llamaindex] Run Pulumi up in [DEPLOY] mode"
+    env:
+      AGENT_DEPLOY: 1
+    cmds:
+      - echo "Running pulumi up with [DEPLOY] mode"
+      - cd ./infra && pulumi up
+    silent: true
+  silent-deploy:
+    desc: "⭕️ [agent_llamaindex] Run Pulumi up in Silent/Integration [DEPLOY] mode"
+    env:
+      AGENT_DEPLOY: 1
+    cmds:
+      - echo "Running pulumi up with [DEPLOY] mode"
+      - cd ./infra && pulumi up --yes --skip-preview
+    silent: true
+  refresh:
+    desc: "⚪️ [agent_llamaindex] Run Pulumi refresh"
+    cmds:
+      - echo "Running pulumi refresh"
+      - cd ./infra && pulumi refresh
+    silent: true
+  destroy:
+    desc: "🔴 [agent_llamaindex] Run Pulumi destroy"
+    cmds:
+      - echo "Running pulumi destroy"
+      - cd ./infra && pulumi destroy
+    silent: true

@@ -1,0 +1,66 @@
+---
+# https://taskfile.dev
+version: '3'
+tasks:
+  install:
+    desc: 🛠️ [agent_llamaindex] Update local dependencies
+    cmds:
+      - echo "Updating local dependencies"
+      - uv sync --all-extras
+      - cd custom_model && uv pip install -r requirements.txt
+    silent: true
+    aliases:
+      - req
+  update:
+    desc: 🛠️ [agent_llamaindex] Update local dependencies (refresh uv locks)
+    cmds:
+      - echo "Updating local dependencies"
+      - uv sync --all-extras -U
+      - cd custom_model && uv pip install -r requirements.txt
+    silent: true
+  lint:
+    desc: 🧹 [agent_llamaindex] Lint the codebase
+    cmds:
+      - task: req
+      - echo "Linting the codebase"
+      - uv run ruff check . --fix
+      - uv run ruff format .
+      - uv run mypy --pretty .
+      - uv run yamlfix custom_model
+    silent: true
+  lint-check:
+    desc: 🧹 [agent_llamaindex] Check whether the codebase is linted
+    cmds:
+      - task: req
+      - echo "Checking linting"
+      - uv run ruff format --check --diff .
+      - uv run ruff check --diff .
+      - uv run mypy --pretty .
+    silent: true
+  test:
+    desc: 🧪 [agent_llamaindex] Run tests
+    cmds:
+      - echo "Running pytest on tests"
+      - uv run pytest -vv ./tests/
+    silent: true
+  test-coverage:
+    desc: 🧪 [agent_llamaindex] Run tests with coverage
+    cmds:
+      - echo "Running pytest on tests"
+      - uv run pytest -vv --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml ./tests/
+    silent: true
+  cli:
+    desc: 🖥️ [agent_llamaindex] Run the CLI with provided arguments
+    cmds:
+      - echo "Running CLI {{.CLI_ARGS}}"
+      - uv run cli.py {{.CLI_ARGS}}
+    silent: true
+  dev:
+    desc: 🔨[agent_llamaindex] Run the development server
+    env:
+      TARGET_NAME: response
+      FLASK_DEBUG: 1
+    cmds:
+      - echo "Running development server on http://localhost:8842"
+      - uv run drum server -cd custom_model --address localhost:8842 --target-type agenticworkflow
+      - wait
