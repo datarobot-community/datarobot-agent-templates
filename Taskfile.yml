@@ -8,6 +8,9 @@ includes:
   agent:
     taskfile: ./agent_langgraph/Taskfile.yml
     dir: ./agent_langgraph
+  fastapi:
+    taskfile: ./fastapi/Taskfile.yaml
+    dir: ./fastapi
 tasks:
   default:
     desc: "🗒️ Show all available tasks"
@@ -15,16 +18,27 @@ tasks:
       - task --list
     silent: true
   install:
-    desc: "🏗️ [agent_langgraph] Install and setup the agent and infra environments"
+    desc: "🏗️ Install and setup the components"
     cmds:
       - echo "Updating agent environment"
-      - task: agent:req
+      - task: agent:install
+      - echo "Updating fastapi environment"
+      - task: fastapi:install
       - echo "Updating infra environment"
       - cd ./infra && uv sync --all-extras
     silent: true
     aliases:
       - setup
       - req
+  dev:
+    desc: "🔨Run the fastapi development server"
+    env:
+      TARGET_NAME: response
+      FLASK_DEBUG: 1
+    cmds:
+      - echo "Running the development server"
+      - fastapi:test
+    silent: true
   build:
     desc: "🔵 [agent_langgraph] Run Pulumi up in [BUILD] mode"
     env:
