@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Any, Optional, Union
 
 from helpers import create_inputs_from_completion_params
-from langchain_community.chat_models import ChatLiteLLM
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.graph.state import CompiledGraph, CompiledStateGraph
@@ -40,6 +40,7 @@ class MyAgent:
         model: Optional[str] = None,
         verbose: Optional[Union[bool, str]] = True,
         timeout: Optional[int] = 90,
+        nim_deployment_id: Optional[str] = None,
         **kwargs: Any,
     ):
         """Initializes the MyAgent class with API key, base URL, model, and verbosity settings.
@@ -65,55 +66,29 @@ class MyAgent:
         self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
         self.model = model
         self.timeout = timeout
+        self.nim_deployment_id = nim_deployment_id
         if isinstance(verbose, str):
             self.verbose = verbose.lower() == "true"
         elif isinstance(verbose, bool):
             self.verbose = verbose
 
     @property
-    def api_base_litellm(self) -> str:
-        """Returns a modified version of the API base URL suitable for LiteLLM.
-
-        Strips 'api/v2/' or 'api/v2' from the end of the URL if present.
-
-        Returns:
-            str: The modified API base URL.
-        """
-        if self.api_base:
-            return re.sub(r"api/v2/?$", "", self.api_base)
-        return "https://api.datarobot.com"
-
-    @property
-    def llm_with_datarobot_llm_gateway(self) -> ChatLiteLLM:
-        """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Gateway.
+    def nim_deployment(self) -> ChatOpenAI:
+        """Returns a ChatOpenAI instance configured to use DataRobot's LLM Deployments.
 
         This property can serve as a primary LLM backend for the agents. You can optionally
         have multiple LLMs configured, such as one for DataRobot's LLM Gateway
         and another for a specific DataRobot deployment, or even multiple deployments or
         third-party LLMs.
         """
-        return ChatLiteLLM(
-            model="datarobot/azure/gpt-4o-mini",
-            api_base=self.api_base_litellm,
+        return ChatOpenAI(
+            model="meta/llama3-8b-instruct",
+            base_url=f"https://app.datarobot.com/api/v2/deployments/{self.nim_deployment_id}",
             api_key=self.api_key,
             timeout=self.timeout,
-        )
-
-    @property
-    def llm_with_datarobot_deployment(self) -> ChatLiteLLM:
-        """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Deployments.
-
-        This property can serve as a primary LLM backend for the agents. You can optionally
-        have multiple LLMs configured, such as one for DataRobot's LLM Gateway
-        and another for a specific DataRobot deployment, or even multiple deployments or
-        third-party LLMs.
-        """
-        deployment_url = f"{self.api_base_litellm}/api/v2/deployments/{os.environ.get('LLM_DEPLOYMENT_ID')}/"
-        return ChatLiteLLM(
-            model="datarobot/azure/gpt-4o-mini",
-            api_base=deployment_url,
-            api_key=self.api_key,
-            timeout=self.timeout,
+            default_headers={
+                "Authorization": f"Bearer {self.api_key}"
+            }
         )
 
     @staticmethod
@@ -129,7 +104,7 @@ class MyAgent:
     @property
     def agent_planner(self) -> CompiledGraph:
         return create_react_agent(
-            self.llm_with_datarobot_llm_gateway,
+            self.nim_deployment,
             tools=[],
             prompt=self.make_system_prompt(
                 "You are a content planner. You are working with an content writer and editor colleague."
@@ -160,7 +135,7 @@ class MyAgent:
     @property
     def agent_writer(self) -> CompiledGraph:
         return create_react_agent(
-            self.llm_with_datarobot_llm_gateway,
+            self.nim_deployment,
             tools=[],
             prompt=self.make_system_prompt(
                 "You are a content writer. You are working with an planner and editor colleague."
@@ -202,7 +177,7 @@ class MyAgent:
     @property
     def agent_editor(self) -> CompiledGraph:
         return create_react_agent(
-            self.llm_with_datarobot_llm_gateway,
+            self.nim_deployment,
             tools=[],
             prompt=self.make_system_prompt(
                 "You are a content editor. You are working with an planner and writer colleague."

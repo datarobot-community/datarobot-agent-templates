@@ -23,7 +23,7 @@ os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
 from agent import MyAgent
 from auth import initialize_authorization_context
 
-# from datarobot_drum import RuntimeParameters
+from datarobot_drum import RuntimeParameters
 from helpers import (
     CustomModelChatResponse,
     to_custom_model_response,
@@ -73,14 +73,17 @@ def chat(
     # the deployment ID can be set as an environment variable and used inside the agent
     # in the llm_with_datarobot_deployment property.
 
-    # llm_datarobot_deployment_id_from_runtime RuntimeParameters.get(
-    #     "LLM_DATAROBOT_DEPLOYMENT_ID"
-    # )
-    # os.environ["LLM_DATAROBOT_DEPLOYMENT_ID"] = llm_datarobot_deployment_id_from_runtime
+    nim_deployment_id = os.environ.get(
+        "DATAROBOT_NIM_DEPLOYMENT_ID"
+    )
+    if nim_deployment_id is None:
+        nim_deployment_id = RuntimeParameters.get(
+            "DATAROBOT_NIM_DEPLOYMENT_ID"
+        )
 
     # Instantiate the agent, all fields from the completion_create_params are passed to the agent
     # allowing environment variables to be passed during execution
-    agent = MyAgent(**completion_create_params)
+    agent = MyAgent(nim_deployment_id=nim_deployment_id,**completion_create_params)
 
     # Execute the agent with the inputs
     agent_result = agent.run(completion_create_params=completion_create_params)

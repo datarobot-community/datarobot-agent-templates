@@ -8,6 +8,6 @@ runtimeParameterDefinitions:
     description: Enables consumption based pricing access to LLMs. If set to false, access to LLMs in this custom model will
       require additional fields.
     type: boolean
-  - fieldName: LLM_DATAROBOT_DEPLOYMENT_ID
-    defaultValue: SET_VIA_PULUMI_OR_MANUALLY
+  - fieldName: DATAROBOT_NIM_DEPLOYMENT_ID
+    defaultValue: 689617d4ccda8ba307f8a759
     type: string
