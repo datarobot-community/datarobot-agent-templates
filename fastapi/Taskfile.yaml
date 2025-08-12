@@ -1,0 +1,57 @@
+---
+# https://taskfile.dev
+version: '3'
+
+tasks:
+  install:
+    desc: "🔧 Install dependencies"
+    cmds:
+      - echo "🔧 Installing dependencies.."
+      - uv sync --all-extras --dev
+
+  dev:
+    silent: true
+    desc: "🔨 Run the development server"
+    cmds:
+      - echo "🔨 Starting development server"
+      - uv run fastapi dev
+
+  lint:
+    silent: true
+    desc: "🧹 Run linters"
+    cmds:
+      - echo "🧹 Running linters.."
+      - uv run ruff format .
+      - uv run ruff check . --fix
+      - uv run mypy --pretty .
+
+  lint-check:
+    silent: true
+    desc: "🧹 Check whether the codebase is linted"
+    cmds:
+      - uv run ruff format --check .
+      - uv run ruff check .
+      - uv run mypy --pretty .
+
+  test:
+    silent: true
+    desc: "🧪 Run tests"
+    cmds:
+      - echo "🧪 Running tests.."
+      - uv run pytest --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml
+
+  copyright:
+    aliases: [license]
+    desc: 📜 Apply license headers
+    cmds:
+      - echo "📜 Applying license headers"
+      - docker run  --rm -v $PWD:/github/workspace ghcr.io/apache/skywalking-eyes/license-eye:eb0e0b091ea41213f712f622797e37526ca1e5d6
+        -v info -c .licenserc.yaml header fix
+
+  copyright-check:
+    aliases: [license-check]
+    desc: 📜 Checking for license headers
+    cmds:
+      - echo "📜 Checking license headers"
+      - docker run  --rm -v $PWD:/github/workspace ghcr.io/apache/skywalking-eyes/license-eye:eb0e0b091ea41213f712f622797e37526ca1e5d6
+        -v info -c .licenserc.yaml header check
