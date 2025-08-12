@@ -13,6 +13,6 @@
   "n": 1,
   "temperature": 0.01,
   "extra_body": {
-    "sso_token": "USER SSO TOKEN FOR TOOL AUTHENTICATION",
+    "sso_token": "USER SSO TOKEN FOR TOOL AUTHENTICATION"
   }
 }
