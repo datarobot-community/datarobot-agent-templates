@@ -66,7 +66,10 @@ class MyAgent:
         self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
         self.model = model
         self.timeout = timeout
+        # Deployment ID for NIM container on datarobot
         self.nim_deployment_id = nim_deployment_id
+        # SSO Token for local tool authentication
+        self.sso_token = kwargs.get("extra_body").get("sso_token", None)
         if isinstance(verbose, str):
             self.verbose = verbose.lower() == "true"
         elif isinstance(verbose, bool):
