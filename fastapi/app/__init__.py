@@ -24,6 +24,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from openai import OpenAI
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import Config
@@ -49,6 +50,40 @@ async def health() -> dict[str, str]:
     If you don't want this, delete `use_health=True` in the middleware.
     """
     return {"status": "healthy"}
+
+
+@base_router.get("/chat")
+async def chat() -> dict[str, str]:
+    """
+    Health check endpoint for Kubernetes probes.
+
+    If you don't want this, delete `use_health=True` in the middleware.
+    """
+    # Need to get the id via pulumi
+    DEPLOYMENT_ID = os.getenv("DEPLOYMENT_ID", "")
+    API_KEY = os.getenv("API_KEY", "")
+    prompt = "What would it take to colonize Mars?"
+
+    openai_client = OpenAI(
+        base_url="https://app.datarobot.com/api/v2/deployments/689b6d93bbb309be7731c752/chat/completion",
+        api_key=API_KEY,
+        _strict_response_validation=False
+    )
+
+    logging.info(f"Trying Simple prompt first: \"{prompt}\"")
+    completion = openai_client.chat.completions.create(
+        model="datarobot-deployed-llm",
+        messages=[
+            {"role": "system", "content": "Explain your thoughts using at least 100 words."},
+            {"role": "user", "content": prompt},
+        ],
+        extra_body={
+            "sso_token": "sso_token_value",  # Replace with actual SSO token if needed
+        },
+        max_tokens=512,  # omit if you want to use the model's default max
+    )
+
+    return completion
 
 
 def get_app_base_url(api_port: str) -> str:

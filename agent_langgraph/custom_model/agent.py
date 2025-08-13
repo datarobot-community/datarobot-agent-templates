@@ -16,6 +16,7 @@ import re
 from datetime import datetime
 from typing import Any, Optional, Union
 
+import requests
 from helpers import create_inputs_from_completion_params
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
@@ -24,6 +25,32 @@ from langgraph.graph.state import CompiledGraph, CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.types import Command
 from openai.types.chat import CompletionCreateParams
+from langchain.tools import BaseTool
+
+
+class ApiQueryTool(BaseTool):
+    name = "api_query_tool"
+    description = (
+        "A tool that sends a query string to an API endpoint with a token in the headers, "
+        "and returns a list of items from the JSON response body."
+    )
+
+    def __init__(self, api_url: str):
+        super().__init__()
+        self.api_url = api_url
+
+    def _run(self, query: str, token: str) -> Any:
+        headers = {"Authorization": f"Bearer {token}"}
+        params = {"query": query}
+        response = requests.get(self.api_url, headers=headers, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        # Assumes the list is under the 'body' key in the response
+        return data.get("body", [])
+
+    async def _arun(self, query: str, token: str) -> Any:
+        # For async support, you could use httpx or aiohttp
+        raise NotImplementedError("Async not implemented for ApiQueryTool.")
 
 
 class MyAgent:
@@ -105,136 +132,39 @@ class MyAgent:
         )
 
     @property
-    def agent_planner(self) -> CompiledGraph:
+    def agent_summarizer(self) -> CompiledGraph:
+        # Create an instance of the ApiQueryTool with a placeholder API URL
+        # You should replace this with your actual API endpoint
+        api_tool = ApiQueryTool(api_url="https://your-api-endpoint.com/api/search")
+
         return create_react_agent(
             self.nim_deployment,
-            tools=[],
+            tools=[api_tool],
             prompt=self.make_system_prompt(
-                "You are a content planner. You are working with an content writer and editor colleague."
+                "You are a content summarizer. You help gather and summarize information from external APIs."
                 "\n"
-                "You're working on planning a blog article "
-                "about the topic."
-                "You collect information that helps the "
-                "audience learn something "
-                "and make informed decisions. "
-                "Your work is the basis for "
-                "the Content Writer to write an article on this topic."
+                "You have access to an API query tool that can search for information using a query string."
+                "Use this tool to gather relevant information about the topic by sending queries to the API."
+                "The API will return a list of items that you should analyze and summarize."
                 "\n"
-                "1. Prioritize the latest trends, key players, "
-                "and noteworthy news on the topic.\n"
-                "2. Identify the target audience, considering "
-                "their interests and pain points.\n"
-                "3. Develop a detailed content outline including "
-                "an introduction, key points, and a call to action.\n"
-                "4. Include SEO keywords and relevant data or sources."
+                "When using the api_query_tool, you need to provide:"
+                "1. query: A search string related to the topic"
+                f"2. token: Use the token '{self.sso_token or 'your-token-here'}'"
                 "\n"
-                "Plan engaging and factually accurate content on the topic."
-                "You must create a comprehensive content plan document "
-                "with an outline, audience analysis, "
-                "SEO keywords, and resources.",
+                "Your goal is to:"
+                "1. Query the API for relevant information about the topic"
+                "2. Analyze the returned data"
+                "3. Create a comprehensive summary of the findings"
+                "4. Highlight key insights and important details"
+                "\n"
+                "Provide a well-structured summary based on the API responses.",
             ),
         )
 
-    @property
-    def agent_writer(self) -> CompiledGraph:
-        return create_react_agent(
-            self.nim_deployment,
-            tools=[],
-            prompt=self.make_system_prompt(
-                "You are a content writer. You are working with an planner and editor colleague."
-                "\n"
-                "You're working on writing "
-                "a new opinion piece about the topic. "
-                "You base your writing on the work of "
-                "the Content Planner, who provides an outline "
-                "and relevant context about the topic. "
-                "You follow the main objectives and "
-                "direction of the outline, "
-                "as provide by the Content Planner. "
-                "You also provide objective and impartial insights "
-                "and back them up with information "
-                "provide by the Content Planner. "
-                "You acknowledge in your opinion piece "
-                "when your statements are opinions "
-                "as opposed to objective statements."
-                "\n"
-                "1. Use the content plan to craft a compelling "
-                "blog post.\n"
-                "2. Incorporate SEO keywords naturally.\n"
-                "3. Sections/Subtitles are properly named "
-                "in an engaging manner.\n"
-                "4. Ensure the post is structured with an "
-                "engaging introduction, insightful body, "
-                "and a summarizing conclusion.\n"
-                "5. Proofread for grammatical errors and "
-                "alignment with the brand's voice.\n"
-                "\n"
-                "Write insightful and factually accurate opinion piece "
-                "about the topic."
-                "You must create a well-written blog post "
-                "in markdown format, ready for publication, "
-                "each section should have 2 or 3 paragraphs.",
-            ),
-        )
-
-    @property
-    def agent_editor(self) -> CompiledGraph:
-        return create_react_agent(
-            self.nim_deployment,
-            tools=[],
-            prompt=self.make_system_prompt(
-                "You are a content editor. You are working with an planner and writer colleague."
-                "\n"
-                "You are an editor who receives a blog post "
-                "from the Content Writer. "
-                "Your goal is to review the blog post "
-                "to ensure that it follows journalistic best practices,"
-                "provides balanced viewpoints "
-                "when providing opinions or assertions, "
-                "and also avoids major controversial topics "
-                "or opinions when possible."
-                "\n"
-                "Proofread the given blog post for grammatical errors "
-                "and alignment with the brand's voice."
-                "\n"
-                "Edit a given blog post to align with the writing style "
-                "of the organization."
-                "You must create a well-written blog post in markdown format, "
-                "ready for publication, "
-                "each section should have 2 or 3 paragraphs.",
-            ),
-        )
-
-    def task_plan(self, state: MessagesState) -> Command[Any]:
-        result = self.agent_planner.invoke(state)
+    def task_summarize(self, state: MessagesState) -> Command[Any]:
+        result = self.agent_summarizer.invoke(state)
         result["messages"][-1] = HumanMessage(
-            content=result["messages"][-1].content, name="planner_node"
-        )
-        return Command(
-            update={
-                # share internal message history with other agents
-                "messages": result["messages"],
-            },
-            goto="writer_node",
-        )
-
-    def task_write(self, state: MessagesState) -> Command[Any]:
-        result = self.agent_planner.invoke(state)
-        result["messages"][-1] = HumanMessage(
-            content=result["messages"][-1].content, name="writer_node"
-        )
-        return Command(
-            update={
-                # share internal message history with other agents
-                "messages": result["messages"],
-            },
-            goto="editor_node",
-        )
-
-    def task_edit(self, state: MessagesState) -> Command[Any]:
-        result = self.agent_planner.invoke(state)
-        result["messages"][-1] = HumanMessage(
-            content=result["messages"][-1].content, name="editor_node"
+            content=result["messages"][-1].content, name="summarizer_node"
         )
         return Command(
             update={
@@ -246,10 +176,8 @@ class MyAgent:
 
     def graph(self) -> CompiledStateGraph:
         workflow = StateGraph(MessagesState)
-        workflow.add_node("planner_node", self.task_plan)
-        workflow.add_node("writer_node", self.task_write)
-        workflow.add_node("editor_node", self.task_edit)
-        workflow.add_edge(START, "planner_node")
+        workflow.add_node("summarizer_node", self.task_summarize)
+        workflow.add_edge(START, "summarizer_node")
         execution_graph = workflow.compile()
         return execution_graph
 
