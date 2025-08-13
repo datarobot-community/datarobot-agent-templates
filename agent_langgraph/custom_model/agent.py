@@ -31,16 +31,17 @@ from langchain.tools import BaseTool
 class ApiQueryTool(BaseTool):
     name = "api_query_tool"
     description = (
-        "A tool that sends a query string to an API endpoint with a token in the headers, "
+        "A tool that sends a query string to an API endpoint with a pre-configured token in the headers, "
         "and returns a list of items from the JSON response body."
     )
 
-    def __init__(self, api_url: str):
+    def __init__(self, api_url: str, token: str):
         super().__init__()
         self.api_url = api_url
+        self.token = token
 
-    def _run(self, query: str, token: str) -> Any:
-        headers = {"Authorization": f"Bearer {token}"}
+    def _run(self, query: str) -> Any:
+        headers = {"Authorization": f"Bearer {self.token}"}
         params = {"query": query}
         response = requests.get(self.api_url, headers=headers, params=params, timeout=30)
         response.raise_for_status()
@@ -48,7 +49,7 @@ class ApiQueryTool(BaseTool):
         # Assumes the list is under the 'body' key in the response
         return data.get("body", [])
 
-    async def _arun(self, query: str, token: str) -> Any:
+    async def _arun(self, query: str) -> Any:
         # For async support, you could use httpx or aiohttp
         raise NotImplementedError("Async not implemented for ApiQueryTool.")
 
@@ -133,9 +134,9 @@ class MyAgent:
 
     @property
     def agent_summarizer(self) -> CompiledGraph:
-        # Create an instance of the ApiQueryTool with a placeholder API URL
+        # Create an instance of the ApiQueryTool with the token pre-configured
         # You should replace this with your actual API endpoint
-        api_tool = ApiQueryTool(api_url="https://your-api-endpoint.com/api/search")
+        api_tool = ApiQueryTool(api_url="https://your-api-endpoint.com/api/search", token=self.sso_token or "your-token-here")
 
         return create_react_agent(
             self.nim_deployment,
@@ -147,9 +148,9 @@ class MyAgent:
                 "Use this tool to gather relevant information about the topic by sending queries to the API."
                 "The API will return a list of items that you should analyze and summarize."
                 "\n"
-                "When using the api_query_tool, you need to provide:"
+                "When using the api_query_tool, you only need to provide:"
                 "1. query: A search string related to the topic"
-                f"2. token: Use the token '{self.sso_token or 'your-token-here'}'"
+                "(The authentication token is already configured)"
                 "\n"
                 "Your goal is to:"
                 "1. Query the API for relevant information about the topic"
