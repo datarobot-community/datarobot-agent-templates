@@ -15,7 +15,7 @@
 import os
 import re
 import textwrap
-from typing import Sequence
+from typing import Final, Sequence
 
 import pulumi
 import pulumi_datarobot
@@ -25,6 +25,9 @@ from datarobot_pulumi_utils.schema.exec_envs import RuntimeEnvironments
 from datarobot_pulumi_utils.pulumi.stack import PROJECT_NAME
 
 from . import use_case, project_dir
+
+SESSION_SECRET_KEY: Final[str] = "SESSION_SECRET_KEY"
+session_secret_key = os.environ.get(SESSION_SECRET_KEY)
 
 EXCLUDE_PATTERNS = [
     re.compile(pattern)
@@ -94,12 +97,12 @@ def get_fastapi_app_files(
     # When we've upgraded to Python 3.13 we can use Path.glob(resuce_symlinks=True)
     # https://docs.python.org/3.13/library/pathlib.html#pathlib.Path.glob
     source_files = []
-    for dirpath, dirnames, filenames in os.walk(web_application_path, followlinks=True):
+    for dirpath, dirnames, filenames in os.walk(fastapi_application_path, followlinks=True):
         for filename in filenames:
             if filename == "metadata.yaml":
                 continue
             file_path = os.path.join(dirpath, filename)
-            rel_path = os.path.relpath(file_path, web_application_path)
+            rel_path = os.path.relpath(file_path, fastapi_application_path)
             source_files.append((os.path.abspath(file_path), rel_path))
     # Add the metadata.yaml file
     source_files.append(
@@ -117,6 +120,14 @@ def get_fastapi_app_files(
 
 
 # Start of Pulumi settings and application infrastructure
+pulumi.export("SESSION_SECRET_KEY", session_secret_key)
+session_secret_cred = pulumi_datarobot.ApiTokenCredential(
+    f"Session Secret Key [{PROJECT_NAME}]",
+    args=pulumi_datarobot.ApiTokenCredentialArgs(
+        api_token=str(session_secret_key),
+    ),
+)
+
 fastapi_app_env_name: str = "DATAROBOT_APPLICATION_ID"
 fastapi_application_path = project_dir.parent / "fastapi"
 
@@ -128,7 +139,13 @@ fastapi_app_source_args = ApplicationSourceArgs(
 fastapi_app_resource_name: str = f" [{PROJECT_NAME}]"
 fastapi_app_runtime_parameters: list[
     pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs
-] = []
+] = [
+    pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs(
+        type="credential",
+        key=SESSION_SECRET_KEY,
+        value=session_secret_cred.id,
+    ),
+]
 
 fastapi_app_source = pulumi_datarobot.ApplicationSource(
     files=get_fastapi_app_files(runtime_parameter_values=fastapi_app_runtime_parameters),

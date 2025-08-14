@@ -14,6 +14,7 @@
 from core.config import DataRobotAppFrameworkBaseSettings
 from core.telemetry.logging import FormatType, LogLevel
 
+
 class Config(DataRobotAppFrameworkBaseSettings):
     session_secret_key: str
     session_max_age: int = 14 * 24 * 60 * 60  # 14 days, in seconds

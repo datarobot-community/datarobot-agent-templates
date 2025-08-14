@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import AsyncGenerator
+
+from app.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -35,20 +40,9 @@ async def create_deps(
         return
 
     # startup routine
-    
+
     yield Deps(
         config=config,
-        db=db,
-        user_repo=UserRepository(db),
-        identity_repo=identity_repo,
-        knowledge_base_repo=KnowledgeBaseRepository(db),
-        file_repo=FileRepository(db),
-        chat_repo=ChatRepository(db),
-        message_repo=MessageRepository(db),
-        api_key_validator=api_key_validator,
-        auth=oauth,
-        tokens=Tokens(oauth, identity_repo),
-        upload_path=upload_path,
     )
 
     # shutdown routine
