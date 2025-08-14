@@ -25,6 +25,7 @@ from datarobot_pulumi_utils.schema.exec_envs import RuntimeEnvironments
 from datarobot_pulumi_utils.pulumi.stack import PROJECT_NAME
 
 from . import use_case, project_dir
+from .agent_langgraph import agent_langgraph_app_runtime_parameters
 
 SESSION_SECRET_KEY: Final[str] = "SESSION_SECRET_KEY"
 session_secret_key = os.environ.get(SESSION_SECRET_KEY)
@@ -139,7 +140,7 @@ fastapi_app_source_args = ApplicationSourceArgs(
 fastapi_app_resource_name: str = f" [{PROJECT_NAME}]"
 fastapi_app_runtime_parameters: list[
     pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs
-] = [
+] = agent_langgraph_app_runtime_parameters + [
     pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs(
         type="credential",
         key=SESSION_SECRET_KEY,

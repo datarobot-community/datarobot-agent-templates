@@ -32,12 +32,9 @@ tasks:
       - req
   dev:
     desc: "🔨Run the fastapi development server"
-    env:
-      TARGET_NAME: response
-      FLASK_DEBUG: 1
-    cmds:
-      - echo "Running the development server"
-      - fastapi:test
+    deps:
+      - fastapi:dev-agent
+      - agent:dev
     silent: true
   build:
     desc: "🔵 [agent_langgraph] Run Pulumi up in [BUILD] mode"

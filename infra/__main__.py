@@ -19,8 +19,16 @@
 from infra import *  # noqa: F403
 import importlib
 from pathlib import Path
+from os import getenv
 
 from datarobot_pulumi_utils.common.feature_flags import check_feature_flags
+from datarobot_pulumi_utils.pulumi import default_collector, finalize
+
+DEFAULT_EXPORT_PATH: Path = Path(
+    getenv(
+        "PULUMI_EXPORT_PATH", str(Path(__file__).parent.parent / "pulumi_config.json")
+    )
+)
 
 
 def import_infra_modules():
@@ -63,3 +71,8 @@ check_all_feature_flags()
 
 # Execute the function to import all modules after the initial import
 import_infra_modules()
+
+# Export outputs using datarobot_pulumi_utils.pulumi.export to a JSON
+# file for use in local development.
+default_collector.output_path = DEFAULT_EXPORT_PATH
+finalize()

@@ -14,7 +14,16 @@ tasks:
     desc: "🔨 Run the development server"
     cmds:
       - echo "🔨 Starting development server"
-      - uv run fastapi dev
+      - uv run fastapi dev --port 8080
+
+  dev-agent:
+    silent: true
+    desc: "🔨 Run the development server with the local agent server"
+    env:
+      AGENT_DEPLOYMENT_URL: http://localhost:8842
+    cmds:
+      - echo "🔨 Starting development server"
+      - uv run fastapi dev --port 8080
 
   lint:
     silent: true

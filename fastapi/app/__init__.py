@@ -16,15 +16,19 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from pathlib import Path
 from typing import AsyncGenerator
 
+import datarobot as dr
+from datarobot.client import RESTClientObject
 from datarobot_asgi_middleware import DataRobotASGIMiddleware
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from openai import OpenAI
+from openai import AsyncOpenAI
+from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import Config
@@ -40,6 +44,24 @@ STATIC_DIR = ROOT_DIR / "static"
 NOTEBOOK_ID = os.getenv("NOTEBOOK_ID", "")
 
 templates = Jinja2Templates(directory=ROOT_DIR / "templates")
+agent_deployment_url = os.getenv("AGENT_DEPLOYMENT_URL") or ""
+agent_deployment_token = os.getenv("AGENT_DEPLOYMENT_TOKEN") or "dummy"
+
+
+@lru_cache(maxsize=128)
+def initialize_deployment(deployment_id: str) -> tuple[RESTClientObject, str]:
+    try:
+        dr_client = dr.Client()
+
+        deployment_chat_base_url = dr_client.endpoint + f"/deployments/{deployment_id}/"
+        return dr_client, deployment_chat_base_url
+    except ValidationError as e:
+        raise ValueError(
+            "Unable to load Deployment ID."
+            "If running locally, verify you have selected the correct "
+            "stack and that it is active using `pulumi stack output`. "
+            "If running in DataRobot, verify your runtime parameters have been set correctly."
+        ) from e
 
 
 @base_router.get("/health")
@@ -53,40 +75,50 @@ async def health() -> dict[str, str]:
 
 
 @base_router.get("/chat")
-async def chat() -> dict[str, str]:
+async def chat(request: Request) -> dict[str, str]:
     """
-    Health check endpoint for Kubernetes probes.
-
-    If you don't want this, delete `use_health=True` in the middleware.
+    Sample Chat Endpoint
     """
     # Need to get the id via pulumi
-    DEPLOYMENT_ID = os.getenv("DEPLOYMENT_ID", "")
-    API_KEY = os.getenv("API_KEY", "")
-    prompt = "What would it take to colonize Mars?"
 
-    openai_client = OpenAI(
-        base_url="https://app.datarobot.com/api/v2/deployments/689b6d93bbb309be7731c752/chat/completion",
-        api_key=API_KEY,
-        _strict_response_validation=False,
+    prompt = "What would it take to colonize Mars?"
+    if agent_deployment_url:
+        # If the agent deployment URL is provided, use it directly
+        # Used for local development through the API server.
+        deployment_chat_base_url = agent_deployment_url
+        token = agent_deployment_token
+    else:
+        dr_client, deployment_chat_base_url = initialize_deployment(
+            request.app.state.deps.config.agent_langgraph_deployment_id
+        )
+        token = dr_client.token
+
+    openai_client = AsyncOpenAI(
+        api_key=token,
+        base_url=deployment_chat_base_url,
+        timeout=90,
+        max_retries=2,
     )
 
     logging.info(f'Trying Simple prompt first: "{prompt}"')
-    completion = openai_client.chat.completions.create(
-        model="datarobot-deployed-llm",
-        messages=[
-            {
-                "role": "system",
-                "content": "Explain your thoughts using at least 100 words.",
+    async with openai_client as client:
+        completion = await client.chat.completions.create(
+            model="datarobot-deployed-llm",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Explain your thoughts using at least 100 words.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            extra_body={
+                "sso_token": "sso_token_value",  # Replace with actual SSO token if needed
             },
-            {"role": "user", "content": prompt},
-        ],
-        extra_body={
-            "sso_token": "sso_token_value",  # Replace with actual SSO token if needed
-        },
-        max_tokens=512,  # omit if you want to use the model's default max
-    )
+            max_tokens=512,  # omit if you want to use the model's default max
+        )
+    llm_message_content = completion.choices[0].message.content
 
-    return completion
+    return dict(content=llm_message_content or "")
 
 
 def get_app_base_url(api_port: str) -> str:
