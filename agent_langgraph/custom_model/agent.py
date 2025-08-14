@@ -12,38 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import re
 from datetime import datetime
 from typing import Any, Optional, Union
 
 import requests
 from helpers import create_inputs_from_completion_params
-from langchain_openai import ChatOpenAI
+from langchain.tools import BaseTool
 from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.graph.state import CompiledGraph, CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.types import Command
 from openai.types.chat import CompletionCreateParams
-from langchain.tools import BaseTool
 
 
 class ApiQueryTool(BaseTool):
-    name = "api_query_tool"
-    description = (
+    name: str = "api_query_tool"
+    description: str = (
         "A tool that sends a query string to an API endpoint with a pre-configured token in the headers, "
         "and returns a list of items from the JSON response body."
     )
+    api_url: str
+    token: str
 
     def __init__(self, api_url: str, token: str):
-        super().__init__()
-        self.api_url = api_url
-        self.token = token
+        super().__init__(api_url=api_url, token=token)
 
     def _run(self, query: str) -> Any:
         headers = {"Authorization": f"Bearer {self.token}"}
         params = {"query": query}
-        response = requests.get(self.api_url, headers=headers, params=params, timeout=30)
+        response = requests.get(
+            self.api_url, headers=headers, params=params, timeout=30
+        )
         response.raise_for_status()
         data = response.json()
         # Assumes the list is under the 'body' key in the response
@@ -97,7 +98,8 @@ class MyAgent:
         # Deployment ID for NIM container on datarobot
         self.nim_deployment_id = nim_deployment_id
         # SSO Token for local tool authentication
-        self.sso_token = kwargs.get("extra_body").get("sso_token", None)
+        extra_body = kwargs.get("extra_body")
+        self.sso_token = extra_body.get("sso_token", None) if extra_body else None
         if isinstance(verbose, str):
             self.verbose = verbose.lower() == "true"
         elif isinstance(verbose, bool):
@@ -117,9 +119,7 @@ class MyAgent:
             base_url=f"https://app.datarobot.com/api/v2/deployments/{self.nim_deployment_id}",
             api_key=self.api_key,
             timeout=self.timeout,
-            default_headers={
-                "Authorization": f"Bearer {self.api_key}"
-            }
+            default_headers={"Authorization": f"Bearer {self.api_key}"},
         )
 
     @staticmethod
@@ -136,7 +136,10 @@ class MyAgent:
     def agent_summarizer(self) -> CompiledGraph:
         # Create an instance of the ApiQueryTool with the token pre-configured
         # You should replace this with your actual API endpoint
-        api_tool = ApiQueryTool(api_url="https://your-api-endpoint.com/api/search", token=self.sso_token or "your-token-here")
+        api_tool = ApiQueryTool(
+            api_url="https://your-api-endpoint.com/api/search",
+            token=self.sso_token or "your-token-here",
+        )
 
         return create_react_agent(
             self.nim_deployment,
