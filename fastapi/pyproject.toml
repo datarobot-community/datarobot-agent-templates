@@ -1,6 +1,6 @@
 [project]
 
-name = "fastapi"
+name = "fastapi-server"
 version = "0.1.0"
 description = "FastAPI Server"
 readme = "README.md"
