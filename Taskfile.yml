@@ -26,6 +26,7 @@ tasks:
       - task: fastapi:install
       - echo "Updating infra environment"
       - cd ./infra && uv sync --all-extras
+      - uv run pulumi plugin install resource datarobot 0.10.14 --server https://github.com/datarobot-community/pulumi-datarobot/releases/download/v0.10.14/
     silent: true
     aliases:
       - setup
@@ -48,6 +49,7 @@ tasks:
     desc: "🟢 [agent_langgraph] Run Pulumi up in [DEPLOY] mode"
     env:
       AGENT_DEPLOY: 1
+      PULUMI_SKIP_UPDATE_CHECK: 1
     cmds:
       - echo "Running pulumi up with [DEPLOY] mode"
       - cd ./infra && uv run pulumi up {{.CLI_ARGS}}
