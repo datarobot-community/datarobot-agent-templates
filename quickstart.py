@@ -150,13 +150,13 @@ def create_new_taskfile(agent_name: str):
         "  ENV: testing\n",
         "dotenv: ['.env', '.env.{{.ENV}}']\n",
     ]
-    with open(taskfile_agent_path, "r") as f:
+    with open(taskfile_agent_path, "r", encoding="utf-8") as f:
         agent_task_file = f.readlines()
 
     includes_line = next(
         idx for idx, line in enumerate(agent_task_file) if "includes:" in line
     )
-    with open(taskfile_path, "w") as f:
+    with open(taskfile_path, "w", encoding="utf-8") as f:
         f.writelines(new_task_file + agent_task_file[includes_line:])
 
     os.remove(work_dir / f"Taskfile_{agent_name}.yml")

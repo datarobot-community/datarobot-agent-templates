@@ -11,23 +11,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ------------------------------------------------------------------------------
+# THIS SECTION OF CODE IS REQUIRED TO SETUP TRACING AND TELEMETRY FOR THE AGENTS.
+# REMOVING THIS CODE WILL DISABLE ALL MONITORING, TRACING AND TELEMETRY.
 # isort: off
-from helpers_telemetry import *  # noqa # pylint: disable=unused-import
+from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
+instrument_requests = RequestsInstrumentor().instrument()
+instrument_aiohttp = AioHttpClientInstrumentor().instrument()
+instrument_httpx = HTTPXClientInstrumentor().instrument()
+instrument_openai = OpenAIInstrumentor().instrument()
+
+
+from opentelemetry.instrumentation.llamaindex import LlamaIndexInstrumentor
+
+instrument_llamaindex = LlamaIndexInstrumentor().instrument()  # type: ignore[no-untyped-call]
 import os
 
 # Some libraries collect telemetry data by default. Let's disable that.
 os.environ["RAGAS_DO_NOT_TRACK"] = "true"
 os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
 # isort: on
+# ------------------------------------------------------------------------------
 
+# ruff: noqa: E402
 from agent import MyAgent
-from auth import initialize_authorization_context
 from datarobot_drum import RuntimeParameters
 from helpers import (
     CustomModelChatResponse,
     to_custom_model_response,
 )
 from openai.types.chat import CompletionCreateParams
+from tools_client import initialize_authorization_context
 
 
 def maybe_set_env_from_runtime_parameters(key: str) -> None:

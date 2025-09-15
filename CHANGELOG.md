@@ -7,23 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
-## v0.2.9
+## 11.2.0
+- List Windows as unsupported OS in docs
+- Add new pre-requisite installation docs with better links and more clarity
+- Rename AI Catalog Tool to Data Registry tool
+- Improve global tools documentation examples
+- Improve the documentation around repositories and updating templates
+- Fix emoji handling during quickstart for Windows environments
+- Bump moderation library version
+- Remove telemetry helper files completely to improve readability
+- Remove auth.py and merge it into tools_client.py to improve readability
+- Corrected type errors in command line args
+- Catch crewai import errors
+- Update langchain to latest release to address CVEs
+- Fix broken env variable in Taskfile for windows environments
+- Add pydantic-ai to base image
+
+## 0.2.9
 - Add initial docs for adding basic tools to agents.
 - Add Datarobot Global Tools examples to docs.
 
-## v0.2.8
+## 0.2.8
 - Fix broken documentation links.
 - Improve sections of documentation and add more links to related DataRobot tutorials.
 - Add CODE_OF_CONDUCT and CONTRIBUTING files to the repository.
 - Update release pipeline to properly inherit SHA from the configurations.
 
-## v0.2.7
+## 0.2.7
 - Add documentation and examples for connecting to different LLM providers.
 
-## v0.2.6
+## 0.2.6
 - Deploy an agentic playground and show / export a link to it
 
-## v0.2.5
+## 0.2.5
 - Bump agent component to 1.2.4
 - Split up and refactor documentation into multiple files for easier navigation.
 - Add instructions for using the CLI to test agents locally and deployed.
@@ -36,21 +52,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix agent env setup in notebook
 - Remove af-component-agent embedded docs and replace with a link to public docs
 
-## v0.2.4
+## 0.2.4
 - Improvements to release process.
 - Minor fixes to task environment.
 
-## v0.2.3
+## 0.2.3
 - Critical fix to custom.py to fix issue with using the LLM gateway when no variable is set.
 
-## v0.2.2
+## 0.2.2
 - Fix and simplify using an external deployment as an LLM instead of LLM gateway.
 
-## v0.2.1
+## 0.2.1
 - Update pulumi to follow naming convention in created assets: `[$stack_name] $agent_name`
 - Restore usage of Auth SDK
 
-## v0.2.0
+## 0.2.0
 - Minor fixes to templates.
 - Ensure pyarrow is pinned to < 21.0.0 to prevent potential ragas issues in some cases.
 - Update datarobot package to latest release.
@@ -58,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update datarobot-moderations to the latest release.
 - Other select packages updated.
 
-## v0.1.13
+## 0.1.13
 - Add pipeline for automating the template repository update process when a new component is released.
 - Add pipeline for performing fully tested release to `datarobot-community` org
 - Fix avd-ds-0002 in `api test` dockerfile
@@ -68,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolve starlette vulnerability in docker_context containers
 - Do not raise an error in the `llm_datarobot` component if llm gateway is enabled.
 
-## v0.1.12
+## 0.1.12
 - Add pipeline for bumping release version automatically and updating changelog versions.
 - Add end to end testing automations
 

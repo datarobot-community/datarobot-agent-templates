@@ -57,12 +57,7 @@ def cli(
 @pass_environment
 @click.option("--user_prompt", default="", help="Input to use for chat.")
 @click.option("--completion_json", default="", help="Path to json to use for chat.")
-@click.option(
-    "--disable_serverless", is_flag=True, help="Use DRUM server standalone predictor."
-)
-def execute(
-    environment: Any, user_prompt: str, completion_json: str, disable_serverless: bool
-) -> None:
+def execute(environment: Any, user_prompt: str, completion_json: str) -> None:
     """Execute agent code locally using OpenAI completions.
 
     Examples:
@@ -75,9 +70,6 @@ def execute(
 
     # Run the agent with a JSON file containing the full chat completion json
     > task cli -- execute --completion_json "example-completion.json"
-
-    # To disable serverless and use DRUM standalone predictor
-    > task cli -- execute --user_prompt "Artificial Intelligence" --disable_serverless
     """
     if len(user_prompt) == 0 and len(completion_json) == 0:
         raise click.UsageError("User prompt message or completion json must provided.")
@@ -86,7 +78,6 @@ def execute(
     response = environment.interface.local(
         user_prompt=user_prompt,
         completion_json=completion_json,
-        use_serverless=not disable_serverless,
     )
     click.echo("\nStored Execution Result:")
     click.echo(response)
@@ -95,7 +86,7 @@ def execute(
 @cli.command()
 @pass_environment
 @click.option("--user_prompt", default="", help="Input to use for predict.")
-@click.option("--custom_model_id", help="ID for the deployment.")
+@click.option("--custom_model_id", default="", help="ID for the deployment.")
 def execute_custom_model(
     environment: Any, user_prompt: str, custom_model_id: str
 ) -> None:
@@ -127,7 +118,7 @@ def execute_custom_model(
 @pass_environment
 @click.option("--user_prompt", default="", help="Input to use for predict.")
 @click.option("--completion_json", default="", help="Path to json to use for chat.")
-@click.option("--deployment_id", help="ID for the deployment.")
+@click.option("--deployment_id", default="", help="ID for the deployment.")
 def execute_deployment(
     environment: Any, user_prompt: str, completion_json: str, deployment_id: str
 ) -> None:

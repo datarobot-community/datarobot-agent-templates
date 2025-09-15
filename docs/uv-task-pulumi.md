@@ -2,6 +2,7 @@
 - [Home](/README.md)
 - [Prerequisites](/docs/getting-started-prerequisites.md)
 - [Getting started](/docs/getting-started.md)
+- [Updating Agentic Templates](/docs/getting-started-updating.md)
 - Developing Agents
   - [Developing your agent](/docs/developing-agents.md)
   - [Using the agent CLI](/docs/developing-agents-cli.md)

@@ -2,7 +2,14 @@
 # https://taskfile.dev
 version: '3'
 vars:
-  CLEAN_PYTHON_ENV: env -u PYTHONPATH -u VIRTUAL_ENV
+  # Cross-platform environment cleaning - uses 'env -u' on Unix systems, falls back to empty string on Windows
+  CLEAN_PYTHON_ENV:
+    sh: |
+      if command -v env >/dev/null 2>&1; then
+        echo "env -u PYTHONPATH -u VIRTUAL_ENV"
+      else
+        echo ""
+      fi
 tasks:
   install:
     desc: 🛠️ [agent_llamaindex] Update local dependencies

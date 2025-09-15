@@ -20,7 +20,6 @@ from helpers import create_inputs_from_completion_params
 from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, MessagesState, StateGraph
-from langgraph.graph.state import CompiledGraph, CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.types import Command
 from openai.types.chat import CompletionCreateParams
@@ -135,7 +134,7 @@ class MyAgent:
         )
 
     @property
-    def agent_planner(self) -> CompiledGraph:
+    def agent_planner(self) -> Any:
         return create_react_agent(
             self.llm,
             tools=[],
@@ -166,7 +165,7 @@ class MyAgent:
         )
 
     @property
-    def agent_writer(self) -> CompiledGraph:
+    def agent_writer(self) -> Any:
         return create_react_agent(
             self.llm,
             tools=[],
@@ -208,7 +207,7 @@ class MyAgent:
         )
 
     @property
-    def agent_editor(self) -> CompiledGraph:
+    def agent_editor(self) -> Any:
         return create_react_agent(
             self.llm,
             tools=[],
@@ -274,7 +273,7 @@ class MyAgent:
             goto=END,
         )
 
-    def graph(self) -> CompiledStateGraph:
+    def graph(self) -> Any:
         workflow = StateGraph(MessagesState)
         workflow.add_node("planner_node", self.task_plan)
         workflow.add_node("writer_node", self.task_write)
@@ -314,15 +313,16 @@ class MyAgent:
         print("Running agent with inputs:", inputs, flush=True)
 
         # Construct the input message for the langgraph graph.
-        input_message = {
-            "messages": [
-                (
+        input_message = Command(
+            update={
+                "messages": (
                     "user",
                     f"The topic is '{inputs['topic']}'. Make sure you find any interesting and relevant"
                     f"information given the current year is {str(datetime.now().year)}.",
-                )
-            ],
-        }
+                ),
+            },
+            goto="writer_node",
+        )
 
         # Graph stream is a generator that will execute the graph
         graph_stream = self.graph().stream(

@@ -21,7 +21,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
-from httpx import Timeout
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import Span
 from pydantic import ValidationError
@@ -31,7 +30,6 @@ from run_agent import (
     DEFAULT_OUTPUT_LOG_PATH,
     argparse_args,
     construct_prompt,
-    execute_drum,
     main,
     main_stdout_redirect,
     run_agent_procedure,
@@ -521,178 +519,29 @@ class TestStoreResult:
         )
 
 
-class TestExecuteDrum:
-    @patch("run_agent.get_open_port")
-    @patch("run_agent.DrumServerRun")
-    @patch("run_agent.requests.get")
-    @patch("run_agent.OpenAI")
-    @patch("run_agent.inject")
-    def test_execute_drum_success(
-        self,
-        mock_inject,
-        mock_openai,
-        mock_requests_get,
-        mock_drum_server,
-        mock_get_open_port,
-    ):
-        # Setup mocks
-        # Open port is mocked to return a set port during testing
-        mock_get_open_port.return_value = 8191
-
-        mock_drum_instance = MagicMock()
-        mock_drum_instance.url_server_address = "http://localhost:8191"
-        mock_drum_server.return_value.__enter__.return_value = mock_drum_instance
-
-        mock_response = MagicMock()
-        mock_response.ok = True
-        mock_requests_get.return_value = mock_response
-
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = "result"
-        mock_openai.return_value = mock_client
-
-        # Call function
-        result = execute_drum(
-            chat_completion={"messages": [{"role": "user", "content": "Hello"}]},
-            default_headers={"X-Custom": "value"},
-            custom_model_dir="/path/to/model",
-        )
-
-        # Verify DrumServerRun was called with correct parameters
-        mock_drum_server.assert_called_once_with(
-            target_type="agenticworkflow",
-            labels=None,
-            custom_model_dir="/path/to/model",
-            with_error_server=True,
-            production=False,
-            verbose=True,
-            logging_level="info",
-            target_name="response",
-            wait_for_server_timeout=360,
-            port=8191,
-            stream_output=True,
-            max_workers=2,
-        )
-
-        # Verify server verification was performed
-        mock_requests_get.assert_called_once_with("http://localhost:8191")
-
-        # Verify OpenAI client was created with correct params
-        mock_openai.assert_called_once_with(
-            base_url="http://localhost:8191",
-            api_key="not-required",
-            default_headers={"X-Custom": "value"},
-            max_retries=0,
-            timeout=Timeout(timeout=1200, connect=5.0),
-        )
-
-        # Verify completion creation
-        mock_client.chat.completions.create.assert_called_once_with(
-            messages=[{"role": "user", "content": "Hello"}]
-        )
-
-        # Verify inject was called with correct parameters
-        mock_inject.assert_called_once_with({"X-Custom": "value"})
-
-        # Verify result
-        assert result == "result"
-
-    @patch("run_agent.DrumServerRun")
-    @patch("run_agent.requests.get")
-    @patch("run_agent.OpenAI")
-    @patch("run_agent.inject")
-    def test_execute_drum_default_output_path(
-        self,
-        mock_inject,
-        mock_openai,
-        mock_requests_get,
-        mock_drum_server,
-    ):
-        # Setup mocks
-        mock_drum_instance = MagicMock()
-        mock_drum_instance.url_server_address = "http://localhost:8191"
-        mock_drum_server.return_value.__enter__.return_value = mock_drum_instance
-
-        mock_response = MagicMock()
-        mock_response.ok = True
-        mock_requests_get.return_value = mock_response
-
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = "return_value"
-        mock_openai.return_value = mock_client
-
-        # Call function with empty output_path
-        execute_drum(
-            chat_completion={},
-            default_headers={},
-            custom_model_dir=Path("/path/to/model"),
-        )
-
-        # Verify inject was called with correct parameters
-        mock_inject.assert_called_once_with({})
-
-    @patch("run_agent.DrumServerRun")
-    @patch("run_agent.requests.get")
-    @patch("run_agent.root")
-    @patch("run_agent.inject")
-    def test_execute_drum_server_failure(
-        self, mock_inject, mock_root, mock_requests_get, mock_drum_server
-    ):
-        # Setup mocks
-        mock_drum_instance = MagicMock()
-        mock_drum_instance.url_server_address = "http://localhost:8191"
-        mock_drum_server.return_value.__enter__.return_value = mock_drum_instance
-
-        mock_response = MagicMock()
-        mock_response.ok = False
-        mock_response.text = "Server error"
-        mock_requests_get.return_value = mock_response
-
-        # Call function and expect exception
-        with pytest.raises(RuntimeError, match="Server failed to start"):
-            execute_drum(
-                chat_completion="{}",
-                default_headers="{}",
-                custom_model_dir="/path/to/model",
-            )
-
-        # Verify error logging
-        mock_root.error.assert_any_call("Server failed to start")
-        mock_root.error.assert_any_call("Server error")
-
-        # Verify inject was not called
-        mock_inject.assert_not_called()
-
-
 class TestRunAgentProcedure:
     @patch("run_agent.construct_prompt")
     @patch("run_agent.execute_drum_inline")
-    @patch("run_agent.execute_drum")
     @patch("run_agent.store_result")
     @patch("run_agent.setup_otel")
-    @pytest.mark.parametrize("use_serverless", [False, True])
     def test_run_agent_with_custom_model_dir(
         self,
         mock_setup_otel,
         mock_store_result,
-        mock_execute_drum,
         mock_execute_drum_inline,
         mock_construct_prompt,
-        use_serverless,
     ):
         # GIVEN simple input arguments
         mock_args = MagicMock()
         mock_args.chat_completion = '{"messages": []}'
         mock_args.default_headers = "{}"
         mock_args.custom_model_dir = "/path/to/custom/model"
-        mock_args.use_serverless = use_serverless
 
         # GIVEN output_path is set
         mock_args.output_path = "/path/to/output"
 
         # GIVEN a mock completion
         mock_completion = MagicMock()
-        mock_execute_drum.return_value = mock_completion
         mock_execute_drum_inline.return_value = mock_completion
 
         # GIVEN mock_setup_otel returns a span with a trace_id
@@ -710,19 +559,10 @@ class TestRunAgentProcedure:
         mock_setup_otel.assert_called_once_with(mock_args)
 
         # THEN execute_drum was called with correct parameters
-        if use_serverless:
-            mock_execute_drum_inline.assert_called_once_with(
-                chat_completion={"messages": []},
-                custom_model_dir="/path/to/custom/model",
-            )
-            mock_execute_drum.assert_not_called()
-        else:
-            mock_execute_drum.assert_called_once_with(
-                chat_completion={"messages": []},
-                default_headers={},
-                custom_model_dir="/path/to/custom/model",
-            )
-            mock_execute_drum_inline.assert_not_called()
+        mock_execute_drum_inline.assert_called_once_with(
+            chat_completion={"messages": []},
+            custom_model_dir="/path/to/custom/model",
+        )
 
         # THEN store_result was called with correct parameters
         mock_store_result.assert_called_once_with(
@@ -733,32 +573,26 @@ class TestRunAgentProcedure:
 
     @patch("run_agent.construct_prompt")
     @patch("run_agent.execute_drum_inline")
-    @patch("run_agent.execute_drum")
     @patch("run_agent.store_result")
     @patch("run_agent.setup_otel")
-    @pytest.mark.parametrize("use_serverless", [False, True])
     def test_run_agent_without_custom_model_dir(
         self,
         mock_setup_otel,
         mock_store_result,
-        mock_execute_drum,
         mock_execute_drum_inline,
         mock_construct_prompt,
-        use_serverless,
     ):
         # GIVEN simple input arguments
         mock_args = MagicMock()
         mock_args.chat_completion = '{"messages": []}'
         mock_args.default_headers = "{}"
         mock_args.custom_model_dir = "/path/to/custom/model"
-        mock_args.use_serverless = use_serverless
 
         # GIVEN output_path is not set
         mock_args.output_path = None
 
         # GIVEN a mock completion
         mock_completion = MagicMock()
-        mock_execute_drum.return_value = mock_completion
         mock_execute_drum_inline.return_value = mock_completion
 
         # GIVEN mock_setup_otel returns a span with a trace_id
@@ -776,19 +610,10 @@ class TestRunAgentProcedure:
         mock_setup_otel.assert_called_once_with(mock_args)
 
         # THEN execute_drum was called with correct parameters
-        if use_serverless:
-            mock_execute_drum_inline.assert_called_once_with(
-                chat_completion={"messages": []},
-                custom_model_dir="/path/to/custom/model",
-            )
-            mock_execute_drum.assert_not_called()
-        else:
-            mock_execute_drum.assert_called_once_with(
-                chat_completion={"messages": []},
-                default_headers={},
-                custom_model_dir="/path/to/custom/model",
-            )
-            mock_execute_drum_inline.assert_not_called()
+        mock_execute_drum_inline.assert_called_once_with(
+            chat_completion={"messages": []},
+            custom_model_dir="/path/to/custom/model",
+        )
 
         # THEN store_result was called with correct parameters
         mock_store_result.assert_called_once_with(
@@ -803,9 +628,9 @@ class TestMain:
     use it to test the integration of the other procedures."""
 
     @patch("run_agent.argparse_args")
-    @patch("run_agent.execute_drum")
+    @patch("run_agent.execute_drum_inline")
     def test_main_integration(
-        self, mock_execute_drum, mock_argparse_args, tempdir_and_cleanup
+        self, mock_execute_drum_inline, mock_argparse_args, tempdir_and_cleanup
     ):
         """Test main function with a more integrated approach."""
         # GIVEN valid input arguments
@@ -815,7 +640,6 @@ class TestMain:
         )
         mock_args.default_headers = '{"X-Custom": "value"}'
         mock_args.custom_model_dir = "/path/to/model"
-        mock_args.use_serverless = False
         # GIVEN a temporary directory for the output path
         mock_args.output_path = str(tempdir_and_cleanup / "output.json")
         mock_argparse_args.return_value = mock_args
@@ -823,18 +647,17 @@ class TestMain:
         # GIVEN a mock completion returned from execute_drum
         mock_completion = MagicMock()
         mock_completion.model_dump.return_value = {"id": "test-id", "choices": []}
-        mock_execute_drum.return_value = mock_completion
+        mock_execute_drum_inline.return_value = mock_completion
 
         # WHEN main is called
         main()
 
         # THEN execute_drum was called with correct parsed parameters
-        mock_execute_drum.assert_called_once_with(
+        mock_execute_drum_inline.assert_called_once_with(
             chat_completion={
                 "messages": [{"role": "user", "content": "Hello"}],
                 "model": "unknown",
             },
-            default_headers={"X-Custom": "value"},
             custom_model_dir="/path/to/model",
         )
 
@@ -1042,9 +865,9 @@ class TestMainStdoutRedirect:
         assert f.flush.call_count == 2
 
     @patch("run_agent.argparse_args")
-    @patch("run_agent.execute_drum")
+    @patch("run_agent.execute_drum_inline")
     def test_main_stdout_redirect_integration(
-        self, mock_execute_drum, mock_argparse_args, tempdir_and_cleanup
+        self, mock_execute_drum_inline, mock_argparse_args, tempdir_and_cleanup
     ):
         """Test main function with a more integrated approach."""
         # GIVEN valid input arguments
@@ -1054,7 +877,6 @@ class TestMainStdoutRedirect:
         )
         mock_args.default_headers = '{"X-Custom": "value"}'
         mock_args.custom_model_dir = "/path/to/model"
-        mock_args.use_serverless = False
         # GIVEN a temporary directory for the output path
         mock_args.output_path = str(tempdir_and_cleanup / "output.json")
         mock_argparse_args.return_value = mock_args
@@ -1062,18 +884,17 @@ class TestMainStdoutRedirect:
         # GIVEN a mock completion returned from execute_drum
         mock_completion = MagicMock()
         mock_completion.model_dump.return_value = {"id": "test-id", "choices": []}
-        mock_execute_drum.return_value = mock_completion
+        mock_execute_drum_inline.return_value = mock_completion
 
         # WHEN main is called
         main_stdout_redirect()
 
         # THEN execute_drum was called with correct parsed parameters
-        mock_execute_drum.assert_called_once_with(
+        mock_execute_drum_inline.assert_called_once_with(
             chat_completion={
                 "messages": [{"role": "user", "content": "Hello"}],
                 "model": "unknown",
             },
-            default_headers={"X-Custom": "value"},
             custom_model_dir="/path/to/model",
         )
 

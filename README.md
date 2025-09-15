@@ -35,9 +35,9 @@ If you are new to developing agentic workflows in DataRobot, we recommend starti
 
 ---
 ### DataRobot Agent Templates Navigation
-- [Home](/README.md)
 - [Prerequisites](/docs/getting-started-prerequisites.md)
 - [Getting started](/docs/getting-started.md)
+- [Updating Agentic Templates](/docs/getting-started-updating.md)
 - Developing Agents
   - [Developing your agent](/docs/developing-agents.md)
   - [Using the agent CLI](/docs/developing-agents-cli.md)
@@ -54,14 +54,29 @@ be adapted to any framework of your choice. Each template includes a simple exam
 
 | Framework        | Description                                              | GitHub Repo | Docs  |
 |------------------|----------------------------------------------------------|-------------|-------|
-| **CrewAI**       | A multi-agent framework with focus on role-based agents, | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
+| **CrewAI**       | A multi-agent framework with focus on role-based agents. | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
+| **Generic Base** | A flexible template for any custom framework.            | -           | -     |
 | **LangGraph**    | Multi-agent orchestration with state graphs.             | [GitHub](https://github.com/langchain-ai/langgraph) | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
 | **Llama-Index**  | A framework for building RAG systems.                    | [GitHub](https://github.com/run-llama/llama_index)  | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
-| **Generic Base** | A flexible template for any custom framework.            | -           | -     |
+
+## Cloning the repository
+#### For cloud users:
+_Clone the repository to your local machine using Git or you can 
+[download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip)._
+```bash
+git clone https://github.com/datarobot-community/datarobot-agent-templates.git
+```
+
+#### For on-premise users:
+_Clone the release branch for your installation using Git:_
+```bash
+git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent-templates.git
+```
 
 ## Get help
 
 If you encounter issues or have questions, use one of the following options:
+- Check that your template is up to date by following the [Updating Agentic Templates](/docs/getting-started-updating.md) guide.
 - Check the documentation for your chosen framework.
 - [Contact DataRobot](https://docs.datarobot.com/en/docs/get-started/troubleshooting/general-help.html) for support.
 - Open an issue on the [GitHub repository](https://github.com/datarobot-community/datarobot-agent-templates).

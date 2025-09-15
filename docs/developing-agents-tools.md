@@ -2,6 +2,7 @@
 - [Home](/README.md)
 - [Prerequisites](/docs/getting-started-prerequisites.md)
 - [Getting started](/docs/getting-started.md)
+- [Updating Agentic Templates](/docs/getting-started-updating.md)
 - Developing Agents
   - [Developing your agent](/docs/developing-agents.md)
   - [Using the agent CLI](/docs/developing-agents-cli.md)
@@ -383,7 +384,7 @@ class WeatherTool(BaseTool):
 ## DataRobot Global Tools Example
 DataRobot provides a set of global tools that can be used across different agent frameworks. These tools are
 designed to interact with DataRobot's platform and services. The following examples demonstrate a global tool
-that searches the DataRobot AI Catalog for datasets. This tool will require network access to fetch the data from
+that searches the DataRobot Data Registry for datasets. This tool will require network access to fetch the data from
 DataRobot. **This example can be modified to create any tool that interacts with DataRobot's services.**
 
 Source code for many global tools can be found in the `agent-tool-templates` repository:
@@ -401,7 +402,7 @@ a global tool using the DataRobot UI:
 <div align="center">
 <img src="./img/datarobot-global-tools-1-registry.png" alt="Deploying a Global Tool" style="max-width: 500px;">
 </div>
-2. Select a tool from the list of available tools. For this example, we will use the "AI Catalog Search"
+2. Select a tool from the list of available tools. For this example, we will use the "Data Registry Search"
    tool. Select a version of the tool.
 <div align="center">
 <img src="./img/datarobot-global-tools-2-select.png" alt="Select a Global Tool" style="max-width: 500px;">
@@ -422,17 +423,18 @@ a global tool using the DataRobot UI:
 
 ### CrewAI
 To add a global DataRobot tool to a CrewAI agent, you can modify the `agent.py` file in the `custom_model`
-directory. You can add the following code to define the DataRobot AI Catalog search tool:
+directory. You can add the following code to define the DataRobot Data Registry search tool:
 ```python
 import json
 from crewai_tools import Tool
 from tools_client import ToolClient
 
-class SearchAICatalogTool(Tool):
+class SearchDataRegistryTool(Tool):
     name = "search_ai_catalog"
     description = (
-        "This tool provides a list of all available dataset names and their associated IDs from the AI catalog. "
-        "You should always check to see if the dataset you are looking for can be found here. "
+        "This tool provides a list of all available dataset names and their associated IDs from "
+        "the Data Registry.  You should always check to see if the dataset you are looking for "
+        "can be found here. "
         "For future queries, you should use the associated dataset ID instead of the name to avoid ambiguity."
         )
 
@@ -478,7 +480,7 @@ class SearchAICatalogTool(Tool):
         except json.JSONDecodeError as e:
             return f"Error parsing DataRobot response: {str(e)}"
         except Exception as e:
-            return f"Error searching AI Catalog: {str(e)}"
+            return f"Error searching Data Registry: {str(e)}"
 ```
 
 When adding this tool to your agent you can use the following code snippet to create the tool. The tool (in this 
@@ -487,24 +489,27 @@ example `search_ai_catalog_tool`) can then be added to the agent's tool list as 
 ```python
 from tools_client import ToolClient
 
-@property
-def tools_client(self) -> ToolClient:
-    return ToolClient(
-        api_key=self.api_key,
-        base_url=self.api_base,
-    )
-
-@property
-def search_ai_catalog_tool(self) -> SearchAICatalogTool:
-  SearchAICatalogTool(
-      tool_client=self.tools_client,
-      deployment_id="YOUR_GLOBAL_TOOL_DEPLOYMENT_ID"  # Replace with your DataRobot global tool deployment ID
-  )
+class MyAgent:
+    ...  # agent implementation code truncated
+    
+    @property
+    def tools_client(self) -> ToolClient:
+        return ToolClient(
+            api_key=self.api_key,
+            base_url=self.api_base,
+        )
+    
+    @property
+    def search_ai_catalog_tool(self) -> SearchDataRegistryTool:
+      SearchDataRegistryTool(
+          tool_client=self.tools_client,
+          deployment_id="YOUR_GLOBAL_TOOL_DEPLOYMENT_ID"  # Replace with your tool deployment ID
+      )
 ```
 
 ### Langgraph
 To add a global DataRobot tool to a LangGraph agent, you can modify the `agent.py` file in the `custom_model`
-directory. You can add the following code to define the DataRobot AI Catalog search tool:
+directory. You can add the following code to define the DataRobot Data Registry search tool:
 ```python
 import json
 from langchain_core.tools import BaseTool
@@ -513,15 +518,16 @@ from typing import Type
 from pydantic import BaseModel, Field
 
 class SearchAICatalogInput(BaseModel):
-    """Input schema for the SearchAICatalogTool."""
+    """Input schema for the SearchDataRegistryTool."""
     search_terms: str = Field(default="", description="Search terms to filter datasets")
     limit: int = Field(default=20, description="Maximum number of results to return")
 
-class SearchAICatalogTool(BaseTool):
+class SearchDataRegistryTool(BaseTool):
     name = "search_ai_catalog"
     description = (
-        "This tool provides a list of all available dataset names and their associated IDs from the AI catalog. "
-        "You should always check to see if the dataset you are looking for can be found here. "
+        "This tool provides a list of all available dataset names and their associated IDs from "
+        "the Data Registry.  You should always check to see if the dataset you are looking for "
+        "can be found here. "
         "For future queries, you should use the associated dataset ID instead of the name to avoid ambiguity."
         )
     args_schema: Type[BaseModel] = SearchAICatalogInput
@@ -568,7 +574,7 @@ class SearchAICatalogTool(BaseTool):
         except json.JSONDecodeError as e:
             return f"Error parsing DataRobot response: {str(e)}"
         except Exception as e:
-            return f"Error searching AI Catalog: {str(e)}"
+            return f"Error searching Data Registry: {str(e)}"
 ```
 
 When adding this tool to your agent you can use the following code snippet to create the tool. The tool (in this 
@@ -577,34 +583,38 @@ example `search_ai_catalog_tool`) can then be added to the agent's tool list as 
 ```python
 from tools_client import ToolClient
 
-@property
-def tools_client(self) -> ToolClient:
-    return ToolClient(
-        api_key=self.api_key,
-        base_url=self.api_base,
-    )
-
-@property
-def search_ai_catalog_tool(self) -> SearchAICatalogTool:
-    return SearchAICatalogTool(
-        tool_client=self.tools_client,
-        deployment_id="YOUR_GLOBAL_TOOL_DEPLOYMENT_ID"  # Replace with your DataRobot global tool deployment ID
-    )
+class MyAgent:
+    ...  # agent implementation code truncated
+    
+    @property
+    def tools_client(self) -> ToolClient:
+        return ToolClient(
+            api_key=self.api_key,
+            base_url=self.api_base,
+        )
+    
+    @property
+    def search_ai_catalog_tool(self) -> SearchDataRegistryTool:
+        return SearchDataRegistryTool(
+            tool_client=self.tools_client,
+            deployment_id="YOUR_GLOBAL_TOOL_DEPLOYMENT_ID"  # Replace with your tool deployment ID
+        )
 ```
 
 ### Llama-Index
 To add a global DataRobot tool to a Llama-Index agent, you can modify the `agent.py` file in the `custom_model`
-directory. You can add the following code to define the DataRobot AI Catalog search tool:
+directory. You can add the following code to define the DataRobot Data Registry search tool:
 ```python
 import json
 from llama_index.tools import BaseTool
 from tools_client import ToolClient
 
-class SearchAICatalogTool(BaseTool):
+class SearchDataRegistryTool(BaseTool):
     name = "search_ai_catalog"
     description = (
-        "This tool provides a list of all available dataset names and their associated IDs from the AI catalog. "
-        "You should always check to see if the dataset you are looking for can be found here. "
+        "This tool provides a list of all available dataset names and their associated IDs from "
+        "the Data Registry.  You should always check to see if the dataset you are looking for "
+        "can be found here. "
         "For future queries, you should use the associated dataset ID instead of the name to avoid ambiguity."
         )
 
@@ -650,7 +660,7 @@ class SearchAICatalogTool(BaseTool):
         except json.JSONDecodeError as e:
             return f"Error parsing DataRobot response: {str(e)}"
         except Exception as e:
-            return f"Error searching AI Catalog: {str(e)}"
+            return f"Error searching Data Registry: {str(e)}"
 ```
 
 When adding this tool to your agent you can use the following code snippet to create the tool. The tool (in this 
@@ -659,19 +669,22 @@ example `search_ai_catalog_tool`) can then be added to the agent's tool list as 
 ```python
 from tools_client import ToolClient
 
-@property
-def tools_client(self) -> ToolClient:
-    return ToolClient(
-        api_key=self.api_key,
-        base_url=self.api_base,
-    )
-
-@property
-def search_ai_catalog_tool(self) -> SearchAICatalogTool:
-    return SearchAICatalogTool(
-        tool_client=self.tools_client,
-        deployment_id="YOUR_GLOBAL_TOOL_DEPLOYMENT_ID"  # Replace with your DataRobot global tool deployment ID
-    )
+class MyAgent:
+    ...  # agent implementation code truncated
+    
+    @property
+    def tools_client(self) -> ToolClient:
+        return ToolClient(
+            api_key=self.api_key,
+            base_url=self.api_base,
+        )
+    
+    @property
+    def search_ai_catalog_tool(self) -> SearchDataRegistryTool:
+        return SearchDataRegistryTool(
+            tool_client=self.tools_client,
+            deployment_id="YOUR_GLOBAL_TOOL_DEPLOYMENT_ID"  # Replace with your tool deployment ID
+        )
 ```
 
 [Back to top](#adding-tools-to-agents-and-agentic-workflows)

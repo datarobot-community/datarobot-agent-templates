@@ -343,7 +343,7 @@ class TestKernel:
         result = kernel.local("Test prompt")
 
         # Assert
-        mock_validate.assert_called_once_with("Test prompt", "", "", "", False)
+        mock_validate.assert_called_once_with("Test prompt", "", "", "")
 
         # Verify system command was executed correctly
         mock_system.assert_called_once_with("python3 run_agent.py --test-args")

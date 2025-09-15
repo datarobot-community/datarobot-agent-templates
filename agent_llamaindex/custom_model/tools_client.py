@@ -18,7 +18,10 @@ from typing import Any, Iterator, Optional, Union, cast
 import datarobot as dr
 import openai
 import pandas as pd
-from datarobot.models.genai.agent.auth import get_authorization_context
+from datarobot.models.genai.agent.auth import (
+    get_authorization_context,
+    set_authorization_context,
+)
 from datarobot_predict.deployment import (
     PredictionResult,
     UnstructuredPredictionResult,
@@ -27,6 +30,21 @@ from datarobot_predict.deployment import (
 )
 from openai.types import CompletionCreateParams
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
+
+
+def initialize_authorization_context(
+    completion_create_params: CompletionCreateParams,
+) -> None:
+    """Sets the authorization context for the agent.
+
+    Authorization context is required for propagating information needed by downstream
+    agents and tools to retrieve access tokens to connect to external services. When set,
+    authorization context will be automatically propagated when using ToolClient class.
+    """
+    # Note: authorization context internally uses contextvars, which are
+    # thread-safe and async-safe.
+    authorization_context = completion_create_params.get("authorization_context", {})
+    set_authorization_context(cast(dict[str, Any], authorization_context))
 
 
 class ToolClient:
