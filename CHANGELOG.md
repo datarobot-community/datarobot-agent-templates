@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.2.1
+- Place github repo heath files inside .github
+- Fix uv brew installation command in docs
+- Improve some wording in the docs around pulumi and clean up some wordy areas
+- Do not ship dev-only tests in the published package to avoid confusion
+- Suppress response output logging during CLI execution and display link to output file
+- Improve quickstart script to handle invalid inputs better
+- Reorder functions and methods in agents to make them more discoverable
+- Redo docstrings in agents to make them more direct and concise
+- Fix SC3046 error in dockerfile
+- Remove agent feature flag warnings in pulumi
+- Fix CVEs in multiple packages
+
 ## 11.2.0
 - List Windows as unsupported OS in docs
 - Add new pre-requisite installation docs with better links and more clarity

@@ -12,10 +12,10 @@ vars:
       fi
 tasks:
   install:
-    desc: 🛠️ [agent_generic_base] Update local dependencies
+    desc: 🛠️ [agent_generic_base] Installing local dependencies
     cmds:
-      - echo "Updating local dependencies"
-      - uv sync --all-extras
+      - echo "Updating local dependencies for agent_generic_base"
+      - uv sync --all-extras --quiet
     silent: true
     aliases:
       - req

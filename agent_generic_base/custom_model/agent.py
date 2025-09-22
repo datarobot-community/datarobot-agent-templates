@@ -61,19 +61,6 @@ class MyAgent:
         elif isinstance(verbose, bool):
             self.verbose = verbose
 
-    @property
-    def api_base_litellm(self) -> str:
-        """Returns a modified version of the API base URL suitable for LiteLLM.
-
-        Strips 'api/v2/' or 'api/v2' from the end of the URL if present.
-
-        Returns:
-            str: The modified API base URL.
-        """
-        if self.api_base:
-            return re.sub(r"api/v2/?$", "", self.api_base)
-        return "https://api.datarobot.com"
-
     def run(
         self, completion_create_params: CompletionCreateParams
     ) -> tuple[str, dict[str, int]]:
@@ -81,17 +68,10 @@ class MyAgent:
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
 
-        Inputs can be extracted from the completion_create_params in several ways. A helper function
-        `create_inputs_from_completion_params` is provided to extract the inputs as json or a string
-        from the 'user' portion of the input prompt. Alternatively you can extract and use one or
-        more inputs or messages from the completion_create_params["messages"] field.
-
         Args:
-            completion_create_params (CompletionCreateParams): The parameters for
-                the completion request, which includes the input topic and other settings.
+            completion_create_params: The completion request parameters including input topic and settings.
         Returns:
-            tuple[list[Any], dict[str, int]]: A tuple containing a list of messages (events) and the agent output.
-
+            tuple[list[Any], dict[str, int]]: A tuple containing a list of messages (events) and usage_statistics for agentic metrics.
         """
 
         # Example helper for extracting inputs as a json from the completion_create_params["messages"]
@@ -113,3 +93,25 @@ class MyAgent:
             "total_tokens": 0,
         }
         return "success", usage
+
+    @property
+    def llm(self) -> Any:
+        """The LLM property should return an instance of the LLM client being used by the agent.
+
+        For help configuring different LLM backends see:
+        https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/developing-agents-llm-providers.md
+        """
+        return None
+
+    @property
+    def api_base_litellm(self) -> str:
+        """Returns a modified version of the API base URL suitable for LiteLLM.
+
+        Strips 'api/v2/' or 'api/v2' from the end of the URL if present.
+
+        Returns:
+            str: The modified API base URL.
+        """
+        if self.api_base:
+            return re.sub(r"api/v2/?$", "", self.api_base)
+        return "https://api.datarobot.com"

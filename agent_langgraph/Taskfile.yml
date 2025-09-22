@@ -12,10 +12,10 @@ vars:
       fi
 tasks:
   install:
-    desc: 🛠️ [agent_langgraph] Update local dependencies
+    desc: 🛠️ [agent_langgraph] Installing local dependencies
     cmds:
-      - echo "Updating local dependencies"
-      - uv sync --all-extras
+      - echo "Updating local dependencies for agent_langgraph"
+      - uv sync --all-extras --quiet
     silent: true
     aliases:
       - req

@@ -26,4 +26,4 @@ jobs:
       - name: Install yamlfmt
         run: go install github.com/google/yamlfmt/cmd/yamlfmt@latest
       - name: Run yamlfmt
-        run: yamlfmt -conf .yamlfmt.yml -lint .
+        run: yamlfmt -conf .github/.yamlfmt.yml -lint .

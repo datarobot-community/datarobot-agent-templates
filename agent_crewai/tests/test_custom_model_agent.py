@@ -297,7 +297,7 @@ class TestMyAgentCrewAI:
         mock_crew.kickoff.return_value = mock_result
 
         # Patch the crew method to return our mock
-        with patch.object(MyAgent, "crew", return_value=mock_crew):
+        with patch.object(MyAgent, "run_crew_agentic_workflow", return_value=mock_crew):
             # Call the run method with test inputs
             completion_create_params = {
                 "model": "test-model",
@@ -309,7 +309,7 @@ class TestMyAgentCrewAI:
             crew_output, events = agent.run(completion_create_params)
 
             # Verify crew() was called
-            agent.crew.assert_called_once()
+            agent.run_crew_agentic_workflow.assert_called_once()
 
             # Verify kickoff was called with the right inputs
             mock_crew.kickoff.assert_called_once_with(

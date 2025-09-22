@@ -65,9 +65,18 @@ __all__ = [
 ]
 
 agent_llamaindex_application_name: str = "agent_llamaindex"
-agent_llamaindex_resource_name: str = "[agent_llamaindex]"
 agent_llamaindex_asset_name: str = f"[{PROJECT_NAME}] agent_llamaindex"
 agent_llamaindex_application_path = project_dir.parent / "agent_llamaindex"
+
+# Allow overriding the resource name suffix via an environment variable
+# For an agent in the folder "agent-crewai", the env var would be AGENT_CREWAI_RESOURCE_NAME_SUFFIX
+# The following could be added to your .env file to customize the resource name:
+# AGENT_CREWAI_RESOURCE_NAME_SUFFIX="my-custom-suffix"
+resource_name_suffix = os.environ.get(
+    agent_llamaindex_application_name.upper() + "_RESOURCE_NAME_SUFFIX",
+    agent_llamaindex_application_name,
+)
+agent_llamaindex_resource_name: str = f"[{resource_name_suffix}]"
 
 
 def get_custom_model_files(custom_model_folder: str) -> list[tuple[str, str]]:

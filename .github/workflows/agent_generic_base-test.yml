@@ -38,7 +38,7 @@ jobs:
       - name: Run cli test
         run: |
           uv run cli.py execute --user_prompt '{"topic": "Artificial Intelligence"}'
-          if uv run cli.py execute --user_prompt '{"topic": "Artificial Intelligence"}' | grep -q '"content": "success"'; then
+          if uv run cli.py execute --show_output --user_prompt '{"topic": "Artificial Intelligence"}' | grep -q '"content": "success"'; then
             echo "Test passed: cli.py returned success"
           else
             echo "Test failed: cli.py did not return success"
@@ -66,7 +66,7 @@ jobs:
       - name: Run cli test
         run: |
           uv run cli.py execute --completion_json "example-completion.json"
-          if uv run cli.py execute --completion_json "example-completion.json" | grep -q '"content": "success"'; then
+          if uv run cli.py execute --show_output --completion_json "example-completion.json" | grep -q '"content": "success"'; then
             echo "Test passed: cli.py returned success"
           else
             echo "Test failed: cli.py did not return success"

@@ -48,6 +48,7 @@ dependencies = [
     "requests>=2.32.4",
     "traceloop-sdk>=0.40.2",
     "uvicorn>=0.35.0",
+    "pypdf>=6.0.0",
 ]
 
 [project.optional-dependencies]

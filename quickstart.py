@@ -33,7 +33,9 @@ venv_dir = work_dir / ".venv"
 def check_dotenv_exists():
     if not dot_env_file.exists():
         print(
-            "Could not find `.env`. Please rename the file `.env.sample` and fill in your details"
+            "Could not find `.env`. Please rename the file `.env.sample` and fill in your details\n\n"
+            "For more help please go to:\n"
+            "  https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/getting-started.md"
         )
         exit(1)
 
@@ -43,9 +45,12 @@ def check_pulumi_installed():
         subprocess.check_call(
             ["pulumi"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
         )
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         print(
-            "Is pulumi installed? If not, please go to `https://www.pulumi.com/docs/iac/download-install/`"
+            "Could not find `pulumi` in your environment.\n\n"
+            "For more help with pre-requisites please go to:\n"
+            "  https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/"
+            "getting-started-prerequisites.md"
         )
         exit(1)
 
@@ -55,9 +60,12 @@ def check_taskfile_installed():
         subprocess.check_call(
             ["task", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
         )
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         print(
-            "Is Taskfile installed? If not, please go to `https://taskfile.dev/installation/`"
+            "Could not find `task` (Taskfile / go-task) in your environment.\n\n"
+            "For more help with pre-requisites please go to:\n"
+            "  https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/"
+            "getting-started-prerequisites.md"
         )
         exit(1)
 
@@ -67,9 +75,12 @@ def check_uv_installed():
         subprocess.check_call(
             ["uv", "version"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
         )
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         print(
-            "Is UV installed? If not, please go to `https://docs.astral.sh/uv/getting-started/installation/`"
+            "Could not find `uv` in your environment.\n\n"
+            "For more help with pre-requisites please go to:\n"
+            "  https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/"
+            "getting-started-prerequisites.md"
         )
         exit(1)
 
@@ -106,13 +117,6 @@ def remove_global_environment_files():
     Removes global environment files such as the .git directory and quickstart.py,
     then initializes a new git repository in the work directory.
     """
-    # Remove .git directory
-    # try:
-    #     shutil.rmtree(str(work_dir / ".git"))
-    #     print("Removed existing .git directory")
-    # except Exception as e:
-    #     print(f"Warning: Could not remove .git directory: {e}")
-
     # Remove quickstart.py file
     try_to_remove(str(work_dir / "quickstart.py"))
 
@@ -121,20 +125,6 @@ def remove_global_environment_files():
 
     # Remove harness pipelines directory if it exists
     try_to_remove(str(work_dir / ".harness"))
-
-    # Remove api_tests directory if it exists
-    # try_to_remove(str(work_dir / "api_tests"))
-
-    # Initialize a new git repository
-    # try:
-    #     subprocess.run(["git", "init"], cwd=work_dir, check=True)
-    #     print("Initialized new git repository")
-    # except subprocess.CalledProcessError as e:
-    #     print(f"Warning: Failed to initialize git repository: {e}")
-    # except FileNotFoundError:
-    #     print("Warning: Git is not installed or not found in PATH")
-    # except Exception as e:
-    #     print(f"Warning: Could not initialize git repository: {e}")
 
 
 def create_new_taskfile(agent_name: str):
@@ -164,13 +154,22 @@ def create_new_taskfile(agent_name: str):
 
 
 def main():
-    print("Checking environment setup...")
+    print("*****           *          ****        *             *  ")
+    print("*    *  ***   *****  ***   *   *  ***  ****   ***  *****")
+    print("*    * *   *    *   *   *  ****  *   * *  *  *   *   *  ")
+    print("*****   *** *   *    *** * *   *  ***  ****   ***    *  ")
+    print()
+    print("--------------------------------------------------------")
+    print("           Quickstart for DataRobot AI Agents           ")
+    print("--------------------------------------------------------")
+
+    print("Checking environment setup for required pre-requisites...")
     check_dotenv_exists()
 
     check_uv_installed()
     check_taskfile_installed()
     check_pulumi_installed()
-    print("All pre-requisites are installed.")
+    print("All pre-requisites are installed.\n")
 
     agent_templates = [
         "agent_crewai",
@@ -178,7 +177,11 @@ def main():
         "agent_langgraph",
         "agent_llamaindex",
     ]
-    print("Please select an agent environment to set up:")
+    print("You will now select an agentic framework to use for this project.")
+    print("For more information on the different agentic frameworks please go to:")
+    print("  https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/getting-started.md")
+    print()
+    print("Please select an agentic framework to use:")
     for i, template in enumerate(agent_templates, start=1):
         print(f"{i}. {template}")
     choice = input("Enter your choice (1-4): ")
@@ -189,6 +192,7 @@ def main():
         template_name = agent_templates[int(choice) - 1]
         print(f"You selected: {template_name}")
         print("Setting up the agent environment...")
+        print("Cleaning up other framework templates to streamline your workspace.")
         agent_templates_to_remove = [
             agent for agent in agent_templates if agent != template_name
         ]
@@ -197,11 +201,34 @@ def main():
         create_new_taskfile(template_name)
         remove_global_environment_files()
 
-        print("\nPlease run the following command for a list of actions:")
-        print("task")
+        print(
+            "\nWould you like to setup the uv python environments and install pre-requisites now?"
+        )
+        run_install = input("(y/n): ").strip().lower()
+        if run_install == "y":
+            print("Running installation...")
+            try:
+                subprocess.run(
+                    ["task", "install"],
+                    cwd=work_dir,
+                    check=True,
+                )
+                print("Installation completed successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Installation failed: {e}")
+                return
 
-        print("\nPlease run the following command to set up the agent environment:")
-        print("task install")
+        print()
+        print("DataRobot agent templates provide you with several CLI tools to help you")
+        print("manage your agent development and deployment.")
+        print("For more information please go to:")
+        print("  https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/"
+              "developing-agents-cli.md")
+        print("\nYou can also run the following command for a list of actions:")
+        print("> task")
+        print()
+        print("\nYou can refresh your environment at any time by running:")
+        print("> task install")
 
 
 if __name__ == "__main__":

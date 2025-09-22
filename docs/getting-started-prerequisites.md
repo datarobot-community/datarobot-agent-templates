@@ -62,7 +62,7 @@ official documentation links](#prerequisite-tools) and websites above for the mo
   ```
 - [**uv**](https://docs.astral.sh/uv/getting-started/installation/) can be installed using Homebrew:
   ```bash
-  brew install astral-sh/astral/uv
+  brew install uv
   ```
 - [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/) can be installed using Homebrew:
   ```bash

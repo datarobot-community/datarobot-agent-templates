@@ -66,6 +66,152 @@ class MyAgent:
             self.verbose = verbose
         self.event_listener = CrewAIEventListener()
 
+    def run(
+        self, completion_create_params: CompletionCreateParams
+    ) -> tuple[CrewOutput, list[Any]]:
+        """Run the agent with the provided completion parameters.
+
+        [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
+
+        Args:
+            completion_create_params: The completion request parameters including input topic and settings.
+        Returns:
+            tuple[CrewOutput, list[Any]]: The crew output and list of events for agentic metrics.
+        """
+        # Example helper for extracting inputs as a json from the completion_create_params["messages"]
+        # field with the 'user' role: (e.g. {"topic": "Artificial Intelligence"})
+        inputs = create_inputs_from_completion_params(completion_create_params)
+
+        # If inputs are a string, convert to a dictionary with 'topic' key for this example.
+        if isinstance(inputs, str):
+            inputs = {"topic": inputs}
+
+        # Print commands may need flush=True to ensure they are displayed in real-time.
+        print("Running agent with inputs:", inputs, flush=True)
+
+        # Run the crew with the inputs
+        crew_output = self.run_crew_agentic_workflow().kickoff(inputs=inputs)
+
+        # Extract the response text from the crew output
+        response_text = str(crew_output.raw)
+
+        # Create a list of events from the event listener
+        events = self.event_listener.messages
+        if len(events) > 0:
+            last_message = events[-1].content
+            if last_message != response_text:
+                events.append(AIMessage(content=response_text))
+        else:
+            events = None
+
+        # The `events` variable is used to compute agentic metrics and guardrails
+        # If you are not interested in these metrics, you can also return None instead.
+        return crew_output, events
+
+    def run_crew_agentic_workflow(self) -> Crew:
+        """Creates and returns a Crew instance with defined agents and tasks."""
+        return Crew(
+            agents=[self.agent_planner, self.agent_writer, self.agent_editor],
+            tasks=[self.task_plan, self.task_write, self.task_edit],
+            verbose=self.verbose,
+        )
+
+    @property
+    def llm(self) -> LLM:
+        """Returns a CrewAI LLM instance configured to use DataRobot's LLM Gateway or a specific deployment.
+
+        For help configuring different LLM backends see:
+        https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/developing-agents-llm-providers.md
+        """
+        if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
+            return self.llm_with_datarobot_deployment
+        else:
+            return self.llm_with_datarobot_llm_gateway
+
+    @property
+    def agent_planner(self) -> Agent:
+        return Agent(
+            role="Content Planner",
+            goal="Plan engaging and factually accurate content on {topic}",
+            backstory="You're working on planning a blog article about the topic: {topic}. You collect "
+            "information that helps the audience learn something and make informed decisions. Your work is "
+            "the basis for the Content Writer to write an article on this topic.",
+            allow_delegation=False,
+            verbose=self.verbose,
+            llm=self.llm,
+        )
+
+    @property
+    def agent_writer(self) -> Agent:
+        return Agent(
+            role="Content Writer",
+            goal="Write insightful and factually accurate opinion piece about the topic: {topic}",
+            backstory="You're working on writing a new opinion piece about the topic: {topic}. You base your writing "
+            "on the work of the Content Planner, who provides an outline and relevant context about the topic. "
+            "You follow the main objectives and direction of the outline, as provided by the Content Planner. "
+            "You also provide objective and impartial insights and back them up with information provided by the "
+            "Content Planner. You acknowledge in your opinion piece when your statements are opinions as opposed "
+            "to objective statements.",
+            allow_delegation=False,
+            verbose=self.verbose,
+            llm=self.llm,
+        )
+
+    @property
+    def agent_editor(self) -> Agent:
+        return Agent(
+            role="Editor",
+            goal="Edit a given blog post to align with the writing style of the organization.",
+            backstory="You are an editor who receives a blog post from the Content Writer. Your goal is to review "
+            "the blog post to ensure that it follows journalistic best practices, provides balanced viewpoints "
+            "when providing opinions or assertions, and also avoids major controversial topics or opinions when "
+            "possible.",
+            allow_delegation=False,
+            verbose=self.verbose,
+            llm=self.llm,
+        )
+
+    @property
+    def task_plan(self) -> Task:
+        return Task(
+            description=(
+                "1. Prioritize the latest trends, key players, and noteworthy news on {topic}.\n"
+                "2. Identify the target audience, considering their interests and pain points.\n"
+                "3. Develop a detailed content outline including an introduction, key points, and a call to action.\n"
+                "4. Include SEO keywords and relevant data or sources."
+            ),
+            expected_output="A comprehensive content plan document with an outline, audience analysis, SEO keywords, "
+            "and resources.",
+            agent=self.agent_planner,
+        )
+
+    @property
+    def task_write(self) -> Task:
+        return Task(
+            description=(
+                "1. Use the content plan to craft a compelling blog post on {topic}.\n"
+                "2. Incorporate SEO keywords naturally.\n"
+                "3. Sections/Subtitles are properly named in an engaging manner.\n"
+                "4. Ensure the post is structured with an engaging introduction, insightful body, and a summarizing "
+                "conclusion.\n"
+                "5. Proofread for grammatical errors and alignment with the brand's voice.\n"
+            ),
+            expected_output="A well-written blog post in markdown format, ready for publication, each section should "
+            "have 2 or 3 paragraphs.",
+            agent=self.agent_writer,
+        )
+
+    @property
+    def task_edit(self) -> Task:
+        return Task(
+            description=(
+                "Proofread the given blog post for grammatical errors and alignment with the brand's voice."
+            ),
+            expected_output="A well-written blog post in markdown format, ready for publication, each section should "
+            "have 2 or 3 paragraphs.",
+            agent=self.agent_editor,
+        )
+
     @property
     def api_base_litellm(self) -> str:
         """Returns a modified version of the API base URL suitable for LiteLLM.
@@ -111,182 +257,3 @@ class MyAgent:
             api_key=self.api_key,
             timeout=self.timeout,
         )
-
-    @property
-    def llm(self) -> LLM:
-        """Returns a CrewAI LLM instance configured to use DataRobot's LLM Gateway or a specific deployment."""
-        if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
-            return self.llm_with_datarobot_deployment
-        else:
-            return self.llm_with_datarobot_llm_gateway
-
-    @property
-    def agent_planner(self) -> Agent:
-        return Agent(
-            role="Content Planner",
-            goal="Plan engaging and factually accurate content on {topic}",
-            backstory="You're working on planning a blog article "
-            "about the topic: {topic}."
-            "You collect information that helps the "
-            "audience learn something "
-            "and make informed decisions. "
-            "Your work is the basis for "
-            "the Content Writer to write an article on this topic.",
-            allow_delegation=False,
-            verbose=self.verbose,
-            llm=self.llm,
-        )
-
-    @property
-    def agent_writer(self) -> Agent:
-        return Agent(
-            role="Content Writer",
-            goal="Write insightful and factually accurate opinion piece "
-            "about the topic: {topic}",
-            backstory="You're working on a writing "
-            "a new opinion piece about the topic: {topic}. "
-            "You base your writing on the work of "
-            "the Content Planner, who provides an outline "
-            "and relevant context about the topic. "
-            "You follow the main objectives and "
-            "direction of the outline, "
-            "as provide by the Content Planner. "
-            "You also provide objective and impartial insights "
-            "and back them up with information "
-            "provide by the Content Planner. "
-            "You acknowledge in your opinion piece "
-            "when your statements are opinions "
-            "as opposed to objective statements.",
-            allow_delegation=False,
-            verbose=self.verbose,
-            llm=self.llm,
-        )
-
-    @property
-    def agent_editor(self) -> Agent:
-        return Agent(
-            role="Editor",
-            goal="Edit a given blog post to align with the writing style "
-            "of the organization. ",
-            backstory="You are an editor who receives a blog post "
-            "from the Content Writer. "
-            "Your goal is to review the blog post "
-            "to ensure that it follows journalistic best practices,"
-            "provides balanced viewpoints "
-            "when providing opinions or assertions, "
-            "and also avoids major controversial topics "
-            "or opinions when possible.",
-            allow_delegation=False,
-            verbose=self.verbose,
-            llm=self.llm,
-        )
-
-    @property
-    def task_plan(self) -> Task:
-        return Task(
-            description=(
-                "1. Prioritize the latest trends, key players, "
-                "and noteworthy news on {topic}.\n"
-                "2. Identify the target audience, considering "
-                "their interests and pain points.\n"
-                "3. Develop a detailed content outline including "
-                "an introduction, key points, and a call to action.\n"
-                "4. Include SEO keywords and relevant data or sources."
-            ),
-            expected_output="A comprehensive content plan document "
-            "with an outline, audience analysis, "
-            "SEO keywords, and resources.",
-            agent=self.agent_planner,
-        )
-
-    @property
-    def task_write(self) -> Task:
-        return Task(
-            description=(
-                "1. Use the content plan to craft a compelling "
-                "blog post on {topic}.\n"
-                "2. Incorporate SEO keywords naturally.\n"
-                "3. Sections/Subtitles are properly named "
-                "in an engaging manner.\n"
-                "4. Ensure the post is structured with an "
-                "engaging introduction, insightful body, "
-                "and a summarizing conclusion.\n"
-                "5. Proofread for grammatical errors and "
-                "alignment with the brand's voice.\n"
-            ),
-            expected_output="A well-written blog post "
-            "in markdown format, ready for publication, "
-            "each section should have 2 or 3 paragraphs.",
-            agent=self.agent_writer,
-        )
-
-    @property
-    def task_edit(self) -> Task:
-        return Task(
-            description=(
-                "Proofread the given blog post for grammatical errors "
-                "and alignment with the brand's voice."
-            ),
-            expected_output="A well-written blog post in markdown format, "
-            "ready for publication, "
-            "each section should have 2 or 3 paragraphs.",
-            agent=self.agent_editor,
-        )
-
-    def crew(self) -> Crew:
-        return Crew(
-            agents=[self.agent_planner, self.agent_writer, self.agent_editor],
-            tasks=[self.task_plan, self.task_write, self.task_edit],
-            verbose=self.verbose,
-        )
-
-    def run(
-        self, completion_create_params: CompletionCreateParams
-    ) -> tuple[CrewOutput, list[Any]]:
-        """Run the agent with the provided completion parameters.
-
-        [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
-
-        Inputs can be extracted from the completion_create_params in several ways. A helper function
-        `create_inputs_from_completion_params` is provided to extract the inputs as json or a string
-        from the 'user' portion of the input prompt. Alternatively you can extract and use one or
-        more inputs or messages from the completion_create_params["messages"] field.
-
-        Args:
-            completion_create_params (CompletionCreateParams): The parameters for
-                the completion request, which includes the input topic and other settings.
-        Returns:
-            tuple[CrewOutput, list[Any]]: A tuple containing a list of messages (events) and the crew output.
-
-        """
-        # Example helper for extracting inputs as a json from the completion_create_params["messages"]
-        # field with the 'user' role: (e.g. {"topic": "Artificial Intelligence"})
-        inputs = create_inputs_from_completion_params(completion_create_params)
-
-        # If inputs are a string, convert to a dictionary with 'topic' key for this example.
-        if isinstance(inputs, str):
-            inputs = {"topic": inputs}
-
-        # Print commands may need flush=True to ensure they are displayed in real-time.
-        print("Running agent with inputs:", inputs, flush=True)
-
-        # Run the crew with the inputs
-        crew_output = self.crew().kickoff(inputs=inputs)
-
-        # Extract the response text from the crew output
-        response_text = str(crew_output.raw)
-
-        # Create a list of events from the event listener
-        events = self.event_listener.messages
-        if len(events) > 0:
-            last_message = events[-1].content
-            if last_message != response_text:
-                events.append(AIMessage(content=response_text))
-        else:
-            events = None
-        # The `events` variable is used to compute agentic metrics
-        # (e.g. Task Adherence, Agent Goal Accuracy, Agent Goal Accuracy with Reference,
-        # Tool Call Accuracy).
-        # If you are not interested in these metrics, you can also return None instead.
-        # This will reduce the size of the response significantly.
-        return crew_output, events

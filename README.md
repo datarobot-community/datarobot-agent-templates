@@ -21,7 +21,7 @@
   <a href="https://github.com/datarobot-community/datarobot-agent-templates/tags">
     <img src="https://img.shields.io/github/v/tag/datarobot-community/datarobot-agent-templates?label=version" alt="Latest Release">
   </a>
-  <a href="LICENSE.txt">
+  <a href="/LICENSE">
     <img src="https://img.shields.io/github/license/datarobot-community/datarobot-agent-templates" alt="License">
   </a>
 </p>
