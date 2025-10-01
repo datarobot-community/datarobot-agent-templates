@@ -15,7 +15,6 @@ import os
 import re
 from typing import Any, Optional, Union
 
-from helpers import create_inputs_from_completion_params
 from openai.types.chat import CompletionCreateParams
 
 
@@ -73,17 +72,18 @@ class MyAgent:
         Returns:
             tuple[list[Any], dict[str, int]]: A tuple containing a list of messages (events) and usage_statistics for agentic metrics.
         """
-
-        # Example helper for extracting inputs as a json from the completion_create_params["messages"]
-        # field with the 'user' role: (e.g. {"topic": "Artificial Intelligence"})
-        inputs = create_inputs_from_completion_params(completion_create_params)
-
-        # If inputs are a string, convert to a dictionary with 'topic' key for this example.
-        if isinstance(inputs, str):
-            inputs = {"topic": inputs}
+        # Retrieve the starting user prompt from the CompletionCreateParams
+        user_messages = [
+            msg
+            for msg in completion_create_params["messages"]
+            # You can use other roles as needed (e.g. "system", "assistant")
+            if msg.get("role") == "user"
+        ]
+        user_prompt: Any = user_messages[0] if user_messages else {}
+        user_prompt_content = user_prompt.get("content", {})
 
         # Print commands may need flush=True to ensure they are displayed in real-time.
-        print("Running agent with inputs:", inputs, flush=True)
+        print("Running agent with user prompt:", user_prompt_content, flush=True)
 
         # Here you would implement the logic of your agent using the inputs.
 

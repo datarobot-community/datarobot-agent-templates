@@ -13,6 +13,7 @@
 # limitations under the License.
 import os
 import re
+import shutil
 from typing import cast
 
 import datarobot as dr
@@ -88,6 +89,8 @@ def get_custom_model_files(custom_model_folder: str) -> list[tuple[str, str]]:
         for filename in filenames:
             file_path = os.path.join(dirpath, filename)
             rel_path = os.path.relpath(file_path, custom_model_folder)
+            # Convert to forward slashes for Linux destination
+            rel_path = rel_path.replace(os.path.sep, "/")
             source_files.append((os.path.abspath(file_path), rel_path))
     source_files = [
         (file_path, file_name)
@@ -98,6 +101,38 @@ def get_custom_model_files(custom_model_folder: str) -> list[tuple[str, str]]:
     ]
     return source_files
 
+
+def synchronize_pyproject_dependencies():
+    pyproject_toml_path = os.path.join(
+        str(agent_crewai_application_path), "pyproject.toml"
+    )
+    custom_model_folder = str(
+        os.path.join(str(agent_crewai_application_path), "custom_model")
+    )
+    docker_context_folder = str(
+        os.path.join(str(agent_crewai_application_path), "docker_context")
+    )
+
+    # Check if pyproject.toml exists in the application path
+    if not os.path.exists(pyproject_toml_path):
+        return
+
+    # Copy pyproject.toml to custom_model folder if it exists
+    if os.path.exists(custom_model_folder):
+        custom_model_pyproject_path = os.path.join(
+            custom_model_folder, "pyproject.toml"
+        )
+        shutil.copy2(pyproject_toml_path, custom_model_pyproject_path)
+
+    # Copy pyproject.toml to docker_context folder if it exists
+    if os.path.exists(docker_context_folder):
+        docker_context_pyproject_path = os.path.join(
+            docker_context_folder, "pyproject.toml"
+        )
+        shutil.copy2(pyproject_toml_path, docker_context_pyproject_path)
+
+
+synchronize_pyproject_dependencies()
 
 # Start of Pulumi settings and application infrastructure
 if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
@@ -248,7 +283,7 @@ if os.environ.get("AGENT_DEPLOY") != "0":
         resource_name="Prediction Environment " + agent_crewai_resource_name,
         name=agent_crewai_asset_name,
         platform=dr.enums.PredictionEnvironmentPlatform.DATAROBOT_SERVERLESS,
-        opts=pulumi.ResourceOptions(retain_on_delete=True),
+        opts=pulumi.ResourceOptions(retain_on_delete=False),
     )
 
     agent_crewai_registered_model_args = RegisteredModelArgs(

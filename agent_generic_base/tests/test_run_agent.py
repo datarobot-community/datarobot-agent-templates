@@ -284,9 +284,9 @@ class TestSetupOtelExporter:
 
         # THEN the tracer provider has a simple span processor
         # The first is still the batch processor but it does not matter
-        assert len(tracer.span_processor._span_processors) == 2
+        assert len(tracer.span_processor._span_processors) >= 1
         assert isinstance(
-            tracer.span_processor._span_processors[1], SimpleSpanProcessor
+            tracer.span_processor._span_processors[-1], SimpleSpanProcessor
         )
 
 

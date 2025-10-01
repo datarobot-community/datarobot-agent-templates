@@ -33,10 +33,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          uv sync --all-extras
-          uv pip install git+https://github.com/datarobot-forks/litellm@mattn/add-datarobot-support-to-litellm
+          uv sync --extra dev
       - name: Run cli test
         run: |
+          export DATAROBOT_API_TOKEN=secret
+          export DATAROBOT_ENDPOINT=https://test.com/api/v2
           uv run cli.py execute --user_prompt '{"topic": "Artificial Intelligence"}'
           if uv run cli.py execute --show_output --user_prompt '{"topic": "Artificial Intelligence"}' | grep -q '"content": "success"'; then
             echo "Test passed: cli.py returned success"
@@ -61,10 +62,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          uv sync --all-extras
-          uv pip install git+https://github.com/datarobot-forks/litellm@mattn/add-datarobot-support-to-litellm
+          uv sync --extra dev
       - name: Run cli test
         run: |
+          export DATAROBOT_API_TOKEN=secret
+          export DATAROBOT_ENDPOINT=https://test.com/api/v2
           uv run cli.py execute --completion_json "example-completion.json"
           if uv run cli.py execute --show_output --completion_json "example-completion.json" | grep -q '"content": "success"'; then
             echo "Test passed: cli.py returned success"
@@ -99,7 +101,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          uv sync --all-extras --dev
+          uv sync --extra dev
       - name: Run Static Checks
         run: |
           uv run ruff format --check .

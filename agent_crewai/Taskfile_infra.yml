@@ -1,0 +1,78 @@
+---
+# https://taskfile.dev
+# THIS FILE MUST BE SOURCED FROM ANOTHER TASKFILE IN THE ROOT DIRECTORY
+version: '3'
+vars:
+  # Cross-platform environment cleaning - uses 'env -u' on Unix systems, falls back to empty string on Windows
+  CLEAN_PYTHON_ENV:
+    sh: |
+      if command -v env >/dev/null 2>&1; then
+        echo "env -u PYTHONPATH -u VIRTUAL_ENV"
+      else
+        echo ""
+      fi
+tasks:
+  install:
+    silent: true
+    desc: 🛠️ [infra] Install infra uv dependencies
+    cmds:
+      - echo "Updating local dependencies for infra"
+      - uv sync --quiet
+  lint:
+    silent: true
+    # desc: "🧹 Run linters"
+    cmds:
+      - echo "🧹 Running linters.."
+      - uv run ruff format .
+      - uv run ruff check . --fix
+      - uv run mypy --pretty .
+  lint-check:
+    silent: true
+    # desc: "🧹 Check whether the codebase is linted"
+    cmds:
+      - uv run ruff format --check .
+      - uv run ruff check .
+      - uv run mypy --pretty .
+  init:
+    silent: true
+    # desc: "🆕 Initialize a new Pulumi stack"
+    cmds:
+      - uv run pulumi stack init
+  select:
+    silent: true
+    # desc: "🚂 Select a Stack"
+    cmds:
+      - uv run pulumi stack select
+  info:
+    silent: true
+    # desc: "ℹ️ Show Pulumi stack info"
+    cmds:
+      - uv run pulumi stack
+  build:
+    desc: "🔵 Deploy only playground testing resources with pulumi"
+    env:
+      AGENT_DEPLOY: 0
+    cmds:
+      - echo "[infra] Running pulumi up with [BUILD] mode"
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+    silent: true
+  deploy:
+    desc: "🟢 Deploy all resources with pulumi"
+    env:
+      AGENT_DEPLOY: 1
+    cmds:
+      - echo "Running pulumi up with [DEPLOY] mode"
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+    silent: true
+  refresh:
+    desc: "⚪️ Refresh and sync local pulumi state"
+    cmds:
+      - echo "Running pulumi refresh"
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi refresh {{.CLI_ARGS}}"
+    silent: true
+  destroy:
+    desc: "🔴 Teardown all deployed resources with pulumi"
+    cmds:
+      - echo "Running pulumi destroy"
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi destroy {{.CLI_ARGS}}"
+    silent: true

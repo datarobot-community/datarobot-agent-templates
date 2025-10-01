@@ -4,31 +4,30 @@ version: '3'
 env:
   ENV: testing
 dotenv: ['.env', '.env.{{.ENV}}']
+vars:
+  HIDE: yes
 includes:
   agent_crewai:
-    taskfile: ./Taskfile_agent_crewai.yml
-    dir: .
+    taskfile: ./agent_crewai/Taskfile.yml
+    dir: ./agent_crewai/
     internal: true
   agent_generic_base:
-    taskfile: ./Taskfile_agent_generic_base.yml
-    dir: .
+    taskfile: ./agent_generic_base/Taskfile.yml
+    dir: ./agent_generic_base/
     internal: true
   agent_langgraph:
-    taskfile: ./Taskfile_agent_langgraph.yml
-    dir: .
+    taskfile: ./agent_langgraph/Taskfile.yml
+    dir: ./agent_langgraph/
     internal: true
   agent_llamaindex:
-    taskfile: ./Taskfile_agent_llamaindex.yml
-    dir: .
+    taskfile: ./agent_llamaindex/Taskfile.yml
+    dir: ./agent_llamaindex/
     internal: true
-  development:
-    taskfile: ./Taskfile_development.yml
-    dir: .
 tasks:
   default:
-    desc: "Show all available tasks"
+    desc: "ℹ️ Show all available tasks (run `task --list-all` to see hidden tasks)"
     cmds:
-      - task --list
+      - task --list --sort none
     silent: true
   start:
     desc: "‼️ Quickstart for DataRobot Agent Templates ‼️"
@@ -38,10 +37,10 @@ tasks:
     desc: "Install dependencies for all agent components and infra"
     cmds:
       - echo "Updating dependencies for all agents"
-      - task: agent_crewai:agent:req
-      - task: agent_generic_base:agent:req
-      - task: agent_langgraph:agent:req
-      - task: agent_llamaindex:agent:req
+      - task: agent_crewai:install
+      - task: agent_generic_base:install
+      - task: agent_langgraph:install
+      - task: agent_llamaindex:install
       - echo "Updating infra dependencies"
       - cd ./infra && uv sync --all-extras
     silent: true
@@ -49,26 +48,28 @@ tasks:
       - req
       - install-all
   update:
-    desc: "Update all dependencies for all agent components and infra (refresh uv locks)"
+    # DESC IS HIDDEN TO AVOID SHOWING IN TASK LIST, run `task --list-all` TO SEE IT
+    # desc: "Update all dependencies for all agent components and infra (refresh uv locks){{ end }}"
     cmds:
       - echo "Updating dependencies for all agents"
-      - task: agent_crewai:agent:update
-      - task: agent_generic_base:agent:update
-      - task: agent_langgraph:agent:update
-      - task: agent_llamaindex:agent:update
+      - task: agent_crewai:update
+      - task: agent_generic_base:update
+      - task: agent_langgraph:update
+      - task: agent_llamaindex:update
       - echo "Updating infra dependencies"
       - cd ./infra && uv sync --all-extras -U
     silent: true
     aliases:
       - update-all
   lint:
-    desc: "Lint all agent components and infra"
+    # DESC IS HIDDEN TO AVOID SHOWING IN TASK LIST, run `task --list-all` TO SEE IT
+    # desc: "Lint all agent components and infra"
     cmds:
-      - echo "Linting all agent templates"
-      - task: agent_crewai:agent:lint
-      - task: agent_generic_base:agent:lint
-      - task: agent_langgraph:agent:lint
-      - task: agent_llamaindex:agent:lint
+      - echo "Linting all templates"
+      - task: agent_crewai:lint
+      - task: agent_generic_base:lint
+      - task: agent_langgraph:lint
+      - task: agent_llamaindex:lint
       - echo "Linting infra"
       - cd ./infra && uv run ruff check . --fix && uv run ruff format .
     silent: true

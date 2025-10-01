@@ -1,10 +1,10 @@
 [project]
 
-name = "agent_generic_base"
+name = "DockerContext"
 version = "0.1.0"
-description = "Implementation of agent_generic_base"
+description = "Implementation of DockerContext"
 readme = "README.md"
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.11, <3.13"
 dependencies = [
     "annotated-types>=0.7.0",
     "click>=8.1.8",
@@ -35,8 +35,9 @@ dependencies = [
     "requests>=2.32.4",
     "traceloop-sdk>=0.40.2",
     "uvicorn>=0.32.0",
-    "datarobot[auth]>=3.8.2",
-    "datarobot-moderations>=11.2.3",
+    "datarobot>=3.8.2", # Auth needs pydantic>=2.11.3, maybe we can reduce this
+    # Moderations requires an incompatible llama-index to work
+    # "datarobot-moderations>=11.2.3",
     
     # Docker image requirements (These MUST be included to avoid docker conflicts)
     "ecs-logging>=2.2.0",
@@ -54,6 +55,11 @@ dependencies = [
     "uwsgi>=2.0.30",
 
     # Agent framework requirements
+    "nvidia-nat; python_version >= '3.11'",
+    "nvidia-nat-llama-index; python_version >= '3.11'",
+    "nvidia-nat-opentelemetry; python_version >= '3.11'",
+    "nvidia-nat-crewai; python_version >= '3.11'",
+    "nvidia-nat-langchain; python_version >= '3.11'",
 ]
 
 [project.optional-dependencies]

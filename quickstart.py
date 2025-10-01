@@ -126,31 +126,56 @@ def remove_global_environment_files():
     # Remove harness pipelines directory if it exists
     try_to_remove(str(work_dir / ".harness"))
 
+    # Remove development Taskfile if it exists
+    try_to_remove(str(work_dir / f"Taskfile_dev.yml"))
+
+    # Remove the infra Taskfile if it exists
+    try_to_remove(str(work_dir / "infra" / "Taskfile.yaml"))
+    try_to_remove(str(work_dir / "infra" / "Taskfile.yml"))
+
 
 def create_new_taskfile(agent_name: str):
     """Create a new Taskfile for the selected agent."""
     taskfile_path = work_dir / "Taskfile.yml"
-    taskfile_agent_path = work_dir / f"Taskfile_{agent_name}.yml"
-
-    new_task_file = [
-        "---\n",
-        "# https://taskfile.dev\n",
-        "version: '3'\n",
-        "env:\n",
-        "  ENV: testing\n",
-        "dotenv: ['.env', '.env.{{.ENV}}']\n",
-    ]
-    with open(taskfile_agent_path, "r", encoding="utf-8") as f:
-        agent_task_file = f.readlines()
-
-    includes_line = next(
-        idx for idx, line in enumerate(agent_task_file) if "includes:" in line
-    )
+    new_task_file = f"""---
+# https://taskfile.dev
+version: '3'
+env:
+  ENV: testing
+dotenv: ['.env', '.env.{{.ENV}}']
+includes:
+  # Source the agent Taskfile
+  agent:
+    taskfile: ./{agent_name}/Taskfile.yml
+    dir: ./{agent_name}
+  # Source the infra Taskfile as flat tasks and point at the infra directory
+  infra:
+    taskfile: ./{agent_name}/Taskfile_infra.yml
+    dir: ./infra
+tasks:
+  default:
+    desc: "ℹ️ Show all available tasks (run `task --list-all` to see hidden tasks)"
+    cmds:
+      - task --list --sort none
+    silent: true
+  install:
+    desc: "🛠️ Install all dependencies for agent and infra"
+    cmds:
+      - task: agent:install
+      - task: infra:install
+    silent: true
+  build:
+    cmds:
+      - task: infra:build
+  deploy:
+    cmds:
+      - task: infra:deploy
+  destroy:
+    cmds:
+      - task: infra:destroy
+"""
     with open(taskfile_path, "w", encoding="utf-8") as f:
-        f.writelines(new_task_file + agent_task_file[includes_line:])
-
-    os.remove(work_dir / f"Taskfile_{agent_name}.yml")
-    os.remove(work_dir / f"Taskfile_development.yml")
+        f.writelines(new_task_file)
 
 
 def main():

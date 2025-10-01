@@ -43,7 +43,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          uv sync --all-extras --dev
+          uv sync --extra dev
       - name: Run Static Checks
         run: |
           uv run ruff format --check .

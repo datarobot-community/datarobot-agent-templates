@@ -20,7 +20,7 @@ from unittest.mock import Mock, mock_open, patch
 import pytest
 from openai.types.chat import ChatCompletion
 
-from agent_cli.kernel import Kernel
+from cli import Kernel
 
 
 class TestKernel:
@@ -219,7 +219,7 @@ class TestKernel:
         assert "--custom_model_dir '" in command_args
         assert "--output_path '" in command_args
 
-    @patch("agent_cli.kernel.OpenAI")
+    @patch("cli.OpenAI")
     def test_deployment_basic_functionality(self, mock_openai):
         """Test deployment method creates OpenAI client and calls chat.completions.create correctly."""
         # Setup
@@ -268,7 +268,7 @@ class TestKernel:
         # Verify the result is the completion object
         assert result == mock_completion_obj
 
-    @patch("agent_cli.kernel.OpenAI")
+    @patch("cli.OpenAI")
     @patch("builtins.print")
     def test_deployment_prints_debug_info(self, mock_print, mock_openai):
         """Test deployment method prints debug info."""
@@ -296,7 +296,7 @@ class TestKernel:
         )
         mock_print.assert_any_call(expected_api_url)
 
-    @patch("agent_cli.kernel.OpenAI")
+    @patch("cli.OpenAI")
     def test_deployment_error_handling(self, mock_openai):
         """Test deployment method propagates errors from OpenAI client."""
         # Setup
@@ -398,9 +398,9 @@ class TestKernel:
         # Verify error message was printed
         mock_print.assert_called_with("Error executing command: Command not found")
 
-    @patch("agent_cli.kernel.requests.post")
-    @patch("agent_cli.kernel.requests.get")
-    @patch("agent_cli.kernel.time.sleep")
+    @patch("cli.requests.post")
+    @patch("cli.requests.get")
+    @patch("cli.time.sleep")
     @patch(
         "os.environ",
         {
@@ -471,8 +471,8 @@ class TestKernel:
         # Verify the result content
         assert result == "Hello! How can I help you?"
 
-    @patch("agent_cli.kernel.requests.post")
-    @patch("agent_cli.kernel.time.sleep")
+    @patch("cli.requests.post")
+    @patch("cli.time.sleep")
     @patch(
         "os.environ",
         {
@@ -510,9 +510,9 @@ class TestKernel:
             json={"messages": [{"role": "user", "content": "Hello, assistant!"}]},
         )
 
-    @patch("agent_cli.kernel.requests.post")
-    @patch("agent_cli.kernel.requests.get")
-    @patch("agent_cli.kernel.time.sleep")
+    @patch("cli.requests.post")
+    @patch("cli.requests.get")
+    @patch("cli.time.sleep")
     @patch(
         "os.environ",
         {
@@ -543,9 +543,9 @@ class TestKernel:
         with pytest.raises(Exception):
             kernel.custom_model(custom_model_id, user_prompt)
 
-    @patch("agent_cli.kernel.requests.post")
-    @patch("agent_cli.kernel.requests.get")
-    @patch("agent_cli.kernel.time.sleep")
+    @patch("cli.requests.post")
+    @patch("cli.requests.get")
+    @patch("cli.time.sleep")
     @patch(
         "os.environ",
         {
@@ -589,9 +589,9 @@ class TestKernel:
         assert "status" in str(exc_info.value)
         assert "ERROR" in str(exc_info.value)
 
-    @patch("agent_cli.kernel.requests.post")
-    @patch("agent_cli.kernel.requests.get")
-    @patch("agent_cli.kernel.time.sleep")
+    @patch("cli.requests.post")
+    @patch("cli.requests.get")
+    @patch("cli.time.sleep")
     @patch(
         "os.environ",
         {

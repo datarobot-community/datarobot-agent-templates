@@ -128,16 +128,18 @@ EXPOSE 22
 FROM base AS builder
 # this stage has only bare minimal of dependencies installed to optimize build time for the local development
 
+ENV ANNOY_COMPILER_ARGS="-D_CRT_SECURE_NO_WARNINGS,-DANNOYLIB_MULTITHREADED_BUILD,-march=x86-64"
+
 ARG WORKDIR
 ARG VENV_PATH
+ARG EXT=""
 
-COPY ./requirements.txt ${WORKDIR}/
-COPY ./agent/requirements-agent.txt ${WORKDIR}/
+COPY ./pyproject.toml${EXT} ${WORKDIR}/pyproject.toml
 
-# hadolint ignore=DL3013, SC1091
+WORKDIR ${WORKDIR}
 RUN . ${VENV_PATH}/bin/activate && \
-    uv pip install --no-cache-dir -r ${WORKDIR}/requirements.txt && rm ${WORKDIR}/requirements.txt && \
-    uv pip install --no-cache-dir -r ${WORKDIR}/requirements-agent.txt && rm ${WORKDIR}/requirements-agent.txt
+    uv sync --no-cache
+WORKDIR /
 
 # Copy agent runtime into work directory
 COPY ./run_agent.py ${WORKDIR}/

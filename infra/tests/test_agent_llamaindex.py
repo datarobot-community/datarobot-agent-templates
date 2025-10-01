@@ -450,3 +450,140 @@ class TestGetCustomModelFiles:
         files = agent_infra.get_custom_model_files(str(tmp_path))
         file_names = [f[1] for f in files]
         assert "real.py" in file_names
+
+
+class TestSynchronizePyprojectDependencies:
+    def test_synchronize_pyproject_dependencies_basic(self, tmp_path, monkeypatch):
+        import infra.agent_llamaindex as agent_infra
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Create pyproject.toml in the application path
+        pyproject_content = """[project]
+name = "test-project"
+dependencies = ["requests>=2.0"]
+"""
+        (tmp_path / "pyproject.toml").write_text(pyproject_content)
+
+        # Create custom_model and docker_context directories
+        (tmp_path / "custom_model").mkdir()
+        (tmp_path / "docker_context").mkdir()
+
+        # Call the function
+        agent_infra.synchronize_pyproject_dependencies()
+
+        # Check that pyproject.toml was copied to both directories
+        assert (tmp_path / "custom_model" / "pyproject.toml").exists()
+        assert (tmp_path / "docker_context" / "pyproject.toml").exists()
+
+        # Verify the content is the same
+        assert (
+            tmp_path / "custom_model" / "pyproject.toml"
+        ).read_text() == pyproject_content
+        assert (
+            tmp_path / "docker_context" / "pyproject.toml"
+        ).read_text() == pyproject_content
+
+    def test_synchronize_pyproject_dependencies_no_pyproject(
+        self, tmp_path, monkeypatch
+    ):
+        import infra.agent_llamaindex as agent_infra
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Create custom_model and docker_context directories but no pyproject.toml
+        (tmp_path / "custom_model").mkdir()
+        (tmp_path / "docker_context").mkdir()
+
+        # Call the function - should return early without error
+        agent_infra.synchronize_pyproject_dependencies()
+
+        # Check that no pyproject.toml files were created
+        assert not (tmp_path / "custom_model" / "pyproject.toml").exists()
+        assert not (tmp_path / "docker_context" / "pyproject.toml").exists()
+
+    def test_synchronize_pyproject_dependencies_missing_custom_model_dir(
+        self, tmp_path, monkeypatch
+    ):
+        import infra.agent_llamaindex as agent_infra
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Create pyproject.toml and docker_context directory but not custom_model
+        pyproject_content = """[project]
+name = "test-project"
+"""
+        (tmp_path / "pyproject.toml").write_text(pyproject_content)
+        (tmp_path / "docker_context").mkdir()
+
+        # Call the function
+        agent_infra.synchronize_pyproject_dependencies()
+
+        # Check that pyproject.toml was only copied to docker_context
+        assert not (tmp_path / "custom_model").exists()
+        assert (tmp_path / "docker_context" / "pyproject.toml").exists()
+        assert (
+            tmp_path / "docker_context" / "pyproject.toml"
+        ).read_text() == pyproject_content
+
+    def test_synchronize_pyproject_dependencies_missing_docker_context_dir(
+        self, tmp_path, monkeypatch
+    ):
+        import infra.agent_llamaindex as agent_infra
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Create pyproject.toml and custom_model directory but not docker_context
+        pyproject_content = """[project]
+name = "test-project"
+"""
+        (tmp_path / "pyproject.toml").write_text(pyproject_content)
+        (tmp_path / "custom_model").mkdir()
+
+        # Call the function
+        agent_infra.synchronize_pyproject_dependencies()
+
+        # Check that pyproject.toml was only copied to custom_model
+        assert (tmp_path / "custom_model" / "pyproject.toml").exists()
+        assert not (tmp_path / "docker_context").exists()
+        assert (
+            tmp_path / "custom_model" / "pyproject.toml"
+        ).read_text() == pyproject_content
+
+    def test_synchronize_pyproject_dependencies_overwrites_existing(
+        self, tmp_path, monkeypatch
+    ):
+        import infra.agent_llamaindex as agent_infra
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Create pyproject.toml in the application path
+        new_content = """[project]
+name = "updated-project"
+dependencies = ["requests>=3.0"]
+"""
+        (tmp_path / "pyproject.toml").write_text(new_content)
+
+        # Create directories with existing pyproject.toml files
+        (tmp_path / "custom_model").mkdir()
+        (tmp_path / "docker_context").mkdir()
+
+        old_content = """[project]
+name = "old-project"
+"""
+        (tmp_path / "custom_model" / "pyproject.toml").write_text(old_content)
+        (tmp_path / "docker_context" / "pyproject.toml").write_text(old_content)
+
+        # Call the function
+        agent_infra.synchronize_pyproject_dependencies()
+
+        # Check that the old files were overwritten with new content
+        assert (tmp_path / "custom_model" / "pyproject.toml").read_text() == new_content
+        assert (
+            tmp_path / "docker_context" / "pyproject.toml"
+        ).read_text() == new_content

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.2.2
+- Remove Taskfile_development.yml to avoid confusion
+- Reduce local environment imports
+- Add support for Nvidia-NAT local environment
+- Add initial local dockerfile for Nvidia-NAT
+- Remove hidden docker imports from base image
+- Update packages to address CVEs and vulnerabilities
+- Upgrade core agentic framework packages to latest versions
+- Remove some unnecessary uv.lock entries to improve compatibility
+- Improve the readability of Taskfile commands by reducing unnecessary commands
+- Fix cli commands to all be agent:cli
+- Resolve CVE issues in latest releases
+- Remove dependence on requirements.txt in dockerfile in preparation for moving everything to pyproject.toml
+- Migrate all infra and build logic to pyproject.toml and uv
+- Streamline CLI code to improve readability of the agent directory
+
 ## 11.2.1
 - Place github repo heath files inside .github
 - Fix uv brew installation command in docs

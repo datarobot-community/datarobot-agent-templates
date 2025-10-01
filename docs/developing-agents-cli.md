@@ -93,7 +93,7 @@ Usage: cli.py [OPTIONS] COMMAND [ARGS]...
   and OpenAI completions.
 
   For more information on the main CLI commands and all available options, run
-  the help command: > task cli -- execute --help > task cli -- execute-
+  the help command: > task agent:cli -- execute --help > task agent:cli -- execute-
   deployment --help
 
   Common examples:

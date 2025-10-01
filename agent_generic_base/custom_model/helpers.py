@@ -11,16 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import time
 import uuid
-from typing import Any, Union
 
 from openai.types import CompletionUsage
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionMessage,
-    CompletionCreateParams,
 )
 from openai.types.chat.chat_completion import Choice
 from ragas import MultiTurnSample
@@ -28,30 +25,6 @@ from ragas import MultiTurnSample
 
 class CustomModelChatResponse(ChatCompletion):
     pipeline_interactions: str | None = None
-
-
-def create_inputs_from_completion_params(
-    completion_create_params: CompletionCreateParams,
-) -> Union[dict[str, Any], str]:
-    """Load the user prompt from a JSON string or file."""
-    input_prompt: Any = next(
-        (
-            msg
-            for msg in completion_create_params["messages"]
-            if msg.get("role") == "user"
-        ),
-        {},
-    )
-    if len(input_prompt) == 0:
-        raise ValueError("No user prompt found in the messages.")
-    user_prompt = input_prompt.get("content")
-
-    try:
-        inputs = json.loads(user_prompt)
-    except json.JSONDecodeError:
-        inputs = user_prompt
-
-    return inputs  # type: ignore[no-any-return]
 
 
 def create_completion_from_response_text(

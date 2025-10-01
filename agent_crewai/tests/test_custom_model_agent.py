@@ -301,9 +301,7 @@ class TestMyAgentCrewAI:
             # Call the run method with test inputs
             completion_create_params = {
                 "model": "test-model",
-                "messages": [
-                    {"role": "user", "content": '{"topic": "Artificial Intelligence"}'}
-                ],
+                "messages": [{"role": "user", "content": "Artificial Intelligence"}],
                 "environment_var": True,
             }
             crew_output, events = agent.run(completion_create_params)

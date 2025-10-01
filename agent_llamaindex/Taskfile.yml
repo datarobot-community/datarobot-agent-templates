@@ -12,21 +12,23 @@ vars:
       fi
 tasks:
   install:
-    desc: 🛠️ [agent_llamaindex] Installing local dependencies
+    desc: 🛠️ [agent_llamaindex] Install agent uv dependencies
     cmds:
       - echo "Updating local dependencies for agent_llamaindex"
-      - uv sync --all-extras --quiet
+      - uv sync --extra dev --quiet
     silent: true
     aliases:
       - req
   update:
-    desc: 🛠️ [agent_llamaindex] Update local dependencies (refresh uv locks)
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🛠️ [agent_llamaindex] Update local dependencies (refresh uv locks)
     cmds:
       - echo "Updating local dependencies"
-      - uv sync --all-extras -U
+      - uv sync --extra dev -U
     silent: true
   lint:
-    desc: 🧹 [agent_llamaindex] Lint the codebase
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🧹 [agent_llamaindex] Lint the codebase
     cmds:
       - task: req
       - echo "Linting the codebase"
@@ -36,22 +38,26 @@ tasks:
       - "{{.CLEAN_PYTHON_ENV}} uv run yamlfix custom_model"
     silent: true
   lint-check:
-    desc: 🧹 [agent_llamaindex] Check whether the codebase is linted
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🧹 [agent_llamaindex] Check whether the codebase is linted
     cmds:
       - task: req
       - echo "Checking linting"
       - "{{.CLEAN_PYTHON_ENV}} uv run ruff format --check --diff ."
       - "{{.CLEAN_PYTHON_ENV}} uv run ruff check --diff ."
+      - echo "Checking type hints"
       - "{{.CLEAN_PYTHON_ENV}} uv run mypy --pretty ."
     silent: true
   test:
-    desc: 🧪 [agent_llamaindex] Run tests
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🧪 [agent_llamaindex] Run tests
     cmds:
       - echo "Running pytest on tests"
       - "{{.CLEAN_PYTHON_ENV}} uv run pytest -vv ./tests/"
     silent: true
   test-coverage:
-    desc: 🧪 [agent_llamaindex] Run tests with coverage
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🧪 [agent_llamaindex] Run tests with coverage
     cmds:
       - echo "Running pytest on tests"
       - "{{.CLEAN_PYTHON_ENV}} uv run pytest -vv --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml ./tests/"
@@ -63,7 +69,8 @@ tasks:
       - "{{.CLEAN_PYTHON_ENV}} uv run cli.py {{.CLI_ARGS}}"
     silent: true
   dev:
-    desc: 🔨 [agent_llamaindex] Run the development server
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🔨 [agent_llamaindex] Run the development server
     env:
       TARGET_NAME: response
       FLASK_DEBUG: 1
@@ -74,11 +81,9 @@ tasks:
   build-docker:
     desc: 🐳 [agent_llamaindex] Build the Docker image
     cmds:
-      - echo "Compiling requirements for Docker"
-      - cd docker_context && uv pip compile --python-version 3.11 --universal --no-annotate --no-emit-index-url --output-file=requirements.txt
-        requirements.in
       - echo "Building Docker image"
-      - cd docker_context && docker build --platform linux/amd64 -f Dockerfile -t agent_llamaindex:latest .
+      - cp pyproject.toml docker_context/pyproject.toml
+      - cd docker_context && docker build  --platform linux/amd64 -f Dockerfile -t agent_llamaindex:latest .
       - echo "Saving Docker image"
-      - docker save agent_llamaindex:latest | gzip > docker_context.tar.gz
+      - docker save agent_llamaindex:latest | gzip -1 > docker_context.tar.gz
     silent: true

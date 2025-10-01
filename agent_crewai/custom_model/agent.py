@@ -16,7 +16,7 @@ import re
 from typing import Any, Optional, Union
 
 from crewai import LLM, Agent, Crew, CrewOutput, Task
-from helpers import CrewAIEventListener, create_inputs_from_completion_params
+from helpers import CrewAIEventListener
 from openai.types.chat import CompletionCreateParams
 from ragas.messages import AIMessage
 
@@ -78,19 +78,23 @@ class MyAgent:
         Returns:
             tuple[CrewOutput, list[Any]]: The crew output and list of events for agentic metrics.
         """
-        # Example helper for extracting inputs as a json from the completion_create_params["messages"]
-        # field with the 'user' role: (e.g. {"topic": "Artificial Intelligence"})
-        inputs = create_inputs_from_completion_params(completion_create_params)
-
-        # If inputs are a string, convert to a dictionary with 'topic' key for this example.
-        if isinstance(inputs, str):
-            inputs = {"topic": inputs}
+        # Retrieve the starting user prompt from the CompletionCreateParams
+        user_messages = [
+            msg
+            for msg in completion_create_params["messages"]
+            # You can use other roles as needed (e.g. "system", "assistant")
+            if msg.get("role") == "user"
+        ]
+        user_prompt: Any = user_messages[0] if user_messages else {}
+        user_prompt_content = user_prompt.get("content", {})
 
         # Print commands may need flush=True to ensure they are displayed in real-time.
-        print("Running agent with inputs:", inputs, flush=True)
+        print("Running agent with user prompt:", user_prompt_content, flush=True)
 
         # Run the crew with the inputs
-        crew_output = self.run_crew_agentic_workflow().kickoff(inputs=inputs)
+        crew_output = self.run_crew_agentic_workflow().kickoff(
+            inputs={"topic": user_prompt_content}
+        )
 
         # Extract the response text from the crew output
         response_text = str(crew_output.raw)
