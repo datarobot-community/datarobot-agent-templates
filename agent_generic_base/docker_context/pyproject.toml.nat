@@ -8,7 +8,7 @@ requires-python = ">=3.11, <3.13"
 dependencies = [
     "annotated-types>=0.7.0",
     "click>=8.1.8",
-    "datarobot-drum>=1.16.22",
+    "datarobot-drum>=1.17.3",
     "datarobot-mlops>=11.1.0",
     "datarobot-predict>=1.13.2",
     "dotenv>=0.9.9",
@@ -38,7 +38,7 @@ dependencies = [
     "datarobot>=3.8.2", # Auth needs pydantic>=2.11.3, maybe we can reduce this
     # Moderations requires an incompatible llama-index to work
     # "datarobot-moderations>=11.2.3",
-    
+
     # Docker image requirements (These MUST be included to avoid docker conflicts)
     "ecs-logging>=2.2.0",
     "fastapi[all]==0.115.14",

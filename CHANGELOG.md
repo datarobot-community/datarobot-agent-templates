@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.2.3
+- Fix connecting to llm documentation
+- Optimize agent startup time
+- Resolve llama-index issues
+- Sync local uv.lock file to docker images during deployments
+
 ## 11.2.2
 - Remove Taskfile_development.yml to avoid confusion
 - Reduce local environment imports

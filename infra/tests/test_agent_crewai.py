@@ -463,6 +463,7 @@ name = "test-project"
 dependencies = ["requests>=2.0"]
 """
         (tmp_path / "pyproject.toml").write_text(pyproject_content)
+        (tmp_path / "uv.lock").write_text("test content")
 
         # Create custom_model and docker_context directories
         (tmp_path / "custom_model").mkdir()
@@ -474,6 +475,8 @@ dependencies = ["requests>=2.0"]
         # Check that pyproject.toml was copied to both directories
         assert (tmp_path / "custom_model" / "pyproject.toml").exists()
         assert (tmp_path / "docker_context" / "pyproject.toml").exists()
+        assert (tmp_path / "custom_model" / "uv.lock").exists()
+        assert (tmp_path / "docker_context" / "uv.lock").exists()
 
         # Verify the content is the same
         assert (
@@ -482,6 +485,8 @@ dependencies = ["requests>=2.0"]
         assert (
             tmp_path / "docker_context" / "pyproject.toml"
         ).read_text() == pyproject_content
+        assert (tmp_path / "custom_model" / "uv.lock").read_text() == "test content"
+        assert (tmp_path / "docker_context" / "uv.lock").read_text() == "test content"
 
     def test_synchronize_pyproject_dependencies_no_pyproject(
         self, tmp_path, monkeypatch

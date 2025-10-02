@@ -47,7 +47,10 @@ You can retrieve a list of available models for you account by running the follo
     def llm(self) -> LLM:
         """Returns a CrewAI LLM instance configured to use DataRobot's LLM Gateway."""
         return LLM(
+            # Note: The `datarobot/` prefix is required for LiteLLM to properly route requests
+            # through the LLM Gateway
             model="datarobot/azure/gpt-4o-mini", # Define the model name you want to use
+            # Note: The `/chat/completions` endpoint will be automatically appended by LiteLLM
             api_base="https://app.datarobot.com", # DataRobot endpoint
             api_key=self.api_key, # Your DataRobot API key
             timeout=self.timeout, # Optional timeout for requests
@@ -61,7 +64,10 @@ You can retrieve a list of available models for you account by running the follo
     def llm(self) -> ChatLiteLLM:
         """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Gateway."""
         return ChatLiteLLM(
+            # Note: The `datarobot/` prefix is required for LiteLLM to properly route requests
+            # through the LLM Gateway
             model="datarobot/azure/gpt-4o-mini", # Define the model name you want to use
+            # Note: The `/chat/completions` endpoint will be automatically appended by LiteLLM
             api_base="https://app.datarobot.com", # DataRobot endpoint
             api_key=self.api_key, # Your DataRobot API key
             timeout=self.timeout, # Optional timeout for requests
@@ -75,7 +81,10 @@ You can retrieve a list of available models for you account by running the follo
     def llm(self) -> DataRobotLiteLLM:
         """Returns a DataRobotLiteLLM instance configured to use DataRobot's LLM Gateway."""
         return DataRobotLiteLLM(
+            # Note: The `datarobot/` prefix is required for LiteLLM to properly route requests
+            # through the LLM Gateway
             model="datarobot/azure/gpt-4o-mini", # Define the matching openai model name
+            # Note: The `/chat/completions` endpoint will be automatically appended by LiteLLM
             api_base="https://app.datarobot.com", # DataRobot endpoint
             api_key=self.api_key, # Your DataRobot API key
             timeout=self.timeout, # Optional timeout for requests
@@ -117,8 +126,11 @@ the example by doing the following:
     def llm(self) -> LLM:
         """Returns a CrewAI LLM instance configured to use a DataRobot Deployment."""
         return LLM(
-            model="azure/gpt-4o-mini", # Define the matching openai model name
-            api_base=f"https://app.datarobot.com/api/v2/deployments/{DEPLOYMENT_ID}/chat/completions", # Deployment URL
+            # Note: For DataRobot deployments, some models require removing the `datarobot/` prefix
+            # from the model field. Test with and without the prefix if you encounter issues.
+            model="datarobot/azure/gpt-4o-mini", # Define the matching model name
+            # Note: The `/chat/completions` endpoint will be automatically appended by LiteLLM
+            api_base=f"https://app.datarobot.com/api/v2/deployments/{DEPLOYMENT_ID}/", # Deployment URL
             api_key=self.api_key, # Your DataRobot API key
             timeout=self.timeout, # Optional timeout for requests
         )
@@ -131,8 +143,11 @@ the example by doing the following:
     def llm(self) -> ChatLiteLLM:
         """Returns a ChatLiteLLM instance configured to use a DataRobot Deployment."""
         return ChatLiteLLM(
-            model="azure/gpt-4o-mini", # Define the matching openai model name
-            api_base=f"https://app.datarobot.com/api/v2/deployments/{DEPLOYMENT_ID}/chat/completions", # Deployment URL
+            # Note: For DataRobot deployments, some models require removing the `datarobot/` prefix
+            # from the model field. Test with and without the prefix if you encounter issues.
+            model="datarobot/azure/gpt-4o-mini", # Define the matching model name
+            # Note: The `/chat/completions` endpoint will be automatically appended by LiteLLM
+            api_base=f"https://app.datarobot.com/api/v2/deployments/{DEPLOYMENT_ID}/", # Deployment URL
             api_key=self.api_key, # Your DataRobot API key
             timeout=self.timeout, # Optional timeout for requests
         )
@@ -145,8 +160,11 @@ the example by doing the following:
     def llm(self) -> DataRobotLiteLLM:
         """Returns a DataRobotLiteLLM instance configured to use a DataRobot Deployment."""
         return DataRobotLiteLLM(
-            model="azure/gpt-4o-mini", # Define the matching openai model name
-            api_base=f"https://app.datarobot.com/api/v2/deployments/{DEPLOYMENT_ID}/chat/completions", # Deployment URL
+            # Note: For DataRobot deployments, some models require removing the `datarobot/` prefix
+            # from the model field. Test with and without the prefix if you encounter issues.
+            model="datarobot/azure/gpt-4o-mini", # Define the matching model name
+            # Note: The `/chat/completions` endpoint will be automatically appended by LiteLLM
+            api_base=f"https://app.datarobot.com/api/v2/deployments/{DEPLOYMENT_ID}/", # Deployment URL
             api_key=self.api_key, # Your DataRobot API key
             timeout=self.timeout, # Optional timeout for requests
         )

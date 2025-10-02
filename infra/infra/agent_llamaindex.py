@@ -106,6 +106,7 @@ def synchronize_pyproject_dependencies():
     pyproject_toml_path = os.path.join(
         str(agent_llamaindex_application_path), "pyproject.toml"
     )
+    uv_lock_path = os.path.join(str(agent_llamaindex_application_path), "uv.lock")
     custom_model_folder = str(
         os.path.join(str(agent_llamaindex_application_path), "custom_model")
     )
@@ -123,6 +124,9 @@ def synchronize_pyproject_dependencies():
             custom_model_folder, "pyproject.toml"
         )
         shutil.copy2(pyproject_toml_path, custom_model_pyproject_path)
+        if os.path.exists(uv_lock_path):
+            custom_model_uv_lock_path = os.path.join(custom_model_folder, "uv.lock")
+            shutil.copy2(uv_lock_path, custom_model_uv_lock_path)
 
     # Copy pyproject.toml to docker_context folder if it exists
     if os.path.exists(docker_context_folder):
@@ -130,6 +134,9 @@ def synchronize_pyproject_dependencies():
             docker_context_folder, "pyproject.toml"
         )
         shutil.copy2(pyproject_toml_path, docker_context_pyproject_path)
+        if os.path.exists(uv_lock_path):
+            docker_context_uv_lock_path = os.path.join(docker_context_folder, "uv.lock")
+            shutil.copy2(uv_lock_path, docker_context_uv_lock_path)
 
 
 synchronize_pyproject_dependencies()

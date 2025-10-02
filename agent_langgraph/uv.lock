@@ -88,7 +88,7 @@ requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "datarobot", extras = ["auth"], specifier = ">=3.8.2" },
-    { name = "datarobot-drum", specifier = ">=1.16.22" },
+    { name = "datarobot-drum", specifier = ">=1.17.3" },
     { name = "datarobot-mlops", specifier = ">=11.1.0" },
     { name = "datarobot-moderations", specifier = ">=11.2.3" },
     { name = "datarobot-predict", specifier = ">=1.13.2" },
@@ -902,7 +902,7 @@ auth = [
 
 [[package]]
 name = "datarobot-drum"
-version = "1.17.0"
+version = "1.17.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argcomplete" },
@@ -940,7 +940,7 @@ dependencies = [
     { name = "trafaret" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/3f/adc3adf029ad282421f8ef72a5bf33aff745c5b26037b6e22e98a318177b/datarobot_drum-1.17.0-py3-none-any.whl", hash = "sha256:5860525d9f559cca8a5ff8ae737830889bd3746eafae1de97cbcc00bf7caf1be", size = 10529728 },
+    { url = "https://files.pythonhosted.org/packages/85/b4/114d89d0cb2d41a9b330afa97927c4377cd120262717f4f88fa0a24d0a66/datarobot_drum-1.17.3-py3-none-any.whl", hash = "sha256:1bf8718af297ff604503a9541ef2b9a016f4b391b6560e6bd4ac773a2e7c4705", size = 10530842 },
 ]
 
 [[package]]
