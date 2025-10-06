@@ -35,8 +35,8 @@ Refer to the [Installation instructions](#installation-instructions) section for
 | **Pulumi**   | >= 3.163.0 | An Infrastructure as Code tool. | [Pulumi installation guide](https://www.pulumi.com/docs/iac/download-install/)          |
 | **Taskfile** | >= 3.43.3  | A task runner.                  | [Taskfile installation guide](https://taskfile.dev/docs/installation)                   |
 
-> **IMPORTANT:** You will also need a compatible C++ compiler and build tools installed on your system to compile some
-> Python packages. See the installation instructions below for more details for your OS.
+> **IMPORTANT:** You will also need a compatible C++ compiler and build tools installed on your system to compile some Python packages.
+> As these will vary based on your OS, see the installation instructions below for specific details.
 
 ## Installation instructions
 
@@ -89,51 +89,64 @@ Once it is finished, you can install and/or update the required tools using the 
 ### Linux
 
 The easiest way to install the required tools on Linux is using `curl` to download and run the installation scripts.
-Please refer to the official documentation links above for the most up-to-date instructions.
 
-> **IMPORTANT**: Installation instructions may change over time. If you encounter any issues, please [refer to the
-official documentation links](#prerequisite-tools) and websites above for the most current installation instructions.
+- **Build tools** can be installed using the OS package manager:
+  - On Ubuntu/Debian:
 
-- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) can be installed using your package manager.
-  - On Ubuntu/Debian:
-    ```bash
-    sudo apt-get update
-    sudo apt-get install git
-    ```
-  - On Fedora:
-    ```bash
-    sudo dnf install git
-    ```
-  - On CentOS/RHEL:
-    ```bash
-    sudo yum install git
-    ```
-- [**uv**](https://docs.astral.sh/uv/getting-started/installation/) can be installed using the following command:
-  ```bash
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
-- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/) can be installed using the following command:
-  ```bash
-  curl -fsSL https://get.pulumi.com/ | sh
-  ```
-- [**Taskfile**](https://taskfile.dev/docs/installation) can be installed using the following command:
-  ```bash
-  curl -sL https://taskfile.dev/install.sh | sh
-  ```
-- **Build tools** can be installed using your package manager.
-  - On Ubuntu/Debian:
     ```bash
     sudo apt-get update
     sudo apt-get install build-essential
     ```
+  
   - On Fedora:
+  
     ```bash
     sudo dnf groupinstall "Development Tools"
     ```
+
   - On CentOS/RHEL:
+  
     ```bash
     sudo yum groupinstall "Development Tools"
     ```
+
+- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) can be installed using your package manager.
+  - On Ubuntu/Debian:
+  
+    ```bash
+    sudo apt-get update
+    sudo apt-get install git
+    ```
+
+  - On Fedora:
+  
+    ```bash
+    sudo dnf install git
+    ```
+
+  - On CentOS/RHEL:
+  
+    ```bash
+    sudo yum install git
+    ```
+
+- [**uv**](https://docs.astral.sh/uv/getting-started/installation/)
+
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+
+- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/)
+
+  ```bash
+  curl -fsSL https://get.pulumi.com/ | sh
+  ```
+
+- [**Taskfile**](https://taskfile.dev/docs/installation)
+
+  ```bash
+  curl -sL https://taskfile.dev/install.sh | sh
+  ```
 
 > **NOTE:** You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
 > after installation to ensure the tools are available in your terminal session.
