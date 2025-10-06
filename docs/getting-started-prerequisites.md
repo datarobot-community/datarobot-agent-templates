@@ -1,7 +1,7 @@
 ### DataRobot Agent Templates Navigation
 
 - [Home](/README.md)
-- [Prerequisites](/docs/getting-started-prerequisites.md)
+- [Installing prerequisites](/docs/getting-started-prerequisites.md)
 - [Getting started](/docs/getting-started.md)
 - [Updating Agentic Templates](/docs/getting-started-updating.md)
 - Developing Agents
@@ -20,13 +20,13 @@
 
 If you are using Windows, please consider using a [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html) Windows Subsystem for Linux (WSL) or a virtual machine running a supported OS.
 
-Before getting started, ensure you have the following tools installed and on your system at the required version (or newer).
+Ensure you have the following tools installed and on your system at the required version (or newer).
 It is **recommended to install the tools system-wide** rather than in a virtual environment to ensure they are available in your terminal session.
 Refer to the [Installation instructions](#installation-instructions) section for more details.
 
 ## Prerequisite tools
 
-**[More information and diagrams about these tools are available here.](/docs/uv-task-pulumi.md)**
+[More information and diagrams about these tools are available here.](/docs/uv-task-pulumi.md)
 
 | Tool         | Version    | Description                     | Installation guide                                                                      |
 |--------------|------------|---------------------------------|-----------------------------------------------------------------------------------------|
@@ -39,49 +39,55 @@ Refer to the [Installation instructions](#installation-instructions) section for
 > Python packages. See the installation instructions below for more details for your OS.
 
 ## Installation instructions
-The following sections provide common installation instructions for each tool, but please refer to the official documentation links above for the most up-to-date instructions.
 
-> **NOTE:** You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
-> after installation to ensure the tools are available in your terminal session.
+The following sections provide common installation instructions for each tool on both macOS and Linux.
 
-- [Installing prerequisites](#installing-prerequisites)
-  - [Prerequisite tools](#prerequisite-tools)
-  - [Installation instructions](#installation-instructions)
-    - [MacOS](#macos)
-    - [Linux](#linux)
+- [macOS](#macos)
+- [Linux](#linux)
 
-### MacOS
-The easiest way to install the required tools on macOS is using [Homebrew](https://brew.sh/). If you don't have 
-Homebrew installed, you can install it by following the instructions on the [Homebrew website](https://brew.sh/).
+> **IMPORTANT**: Installation instructions may change over time. If you encounter any issues, please [refer to the official documentation links](#prerequisite-tools) and websites above for the most current installation instructions.
 
-> **IMPORTANT**: Installation instructions may change over time. If you encounter any issues, please [refer to the
-official documentation links](#prerequisite-tools) and websites above for the most current installation instructions.
+### macOS
 
-- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) can be installed using Homebrew, if not
-  already installed by default:
+The easiest way to install the required tools on macOS is using [Homebrew](https://brew.sh/).
+If it is not already installed, run the following command to install it:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Once it is finished, you can install and/or update the required tools using the following commands:
+
+- [**Xcode Command Line Tools**](https://developer.apple.com/documentation/xcode/):
+
+  ```bash
+  xcode-select --install
+  ```
+
+- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) if not already installed by Xcode:
+
   ```bash
   brew install git
   ```
-- [**uv**](https://docs.astral.sh/uv/getting-started/installation/) can be installed using Homebrew:
+
+- [**uv**](https://docs.astral.sh/uv/getting-started/installation/):
   ```bash
   brew install uv
   ```
-- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/) can be installed using Homebrew:
+
+- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/):
   ```bash
   brew install pulumi
   ```
-- [**Taskfile**](https://taskfile.dev/docs/installation) can be installed using Homebrew:
+
+- [**Taskfile**](https://taskfile.dev/docs/installation):
+  
   ```bash
   brew install go-task/tap/go-task
   ```
-- **Xcode Command Line Tools** can be installed by running:
-  ```bash
-  # If you have previously installed Xcode Command Line Tools and need to reinstall or update them, you can run:
-  sudo rm -rf /Library/Developer/CommandLineTools
-  xcode-select --install
-  ```
   
 ### Linux
+
 The easiest way to install the required tools on Linux is using `curl` to download and run the installation scripts.
 Please refer to the official documentation links above for the most up-to-date instructions.
 
@@ -128,3 +134,10 @@ official documentation links](#prerequisite-tools) and websites above for the mo
     ```bash
     sudo yum groupinstall "Development Tools"
     ```
+
+> **NOTE:** You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
+> after installation to ensure the tools are available in your terminal session.
+
+# Next steps
+
+From here, proceed to [Getting started](/docs/getting-started.md).
