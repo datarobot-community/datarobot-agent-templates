@@ -48,9 +48,7 @@ If you are new to developing agentic workflows in DataRobot, we recommend starti
 
 # Available templates
 
-This repository includes templates for three popular agent frameworks and a generic base template that can 
-be adapted to any framework of your choice. Each template includes a simple example agentic workflow with 3 agents and 
-3 tasks.
+This repository includes templates for three popular agent frameworks and a generic base template that can be adapted to any framework of your choice.Each template includes a simple example agentic workflow with 3 agents and 3 tasks.
 
 | Framework        | Description                                              | GitHub Repo | Docs  |
 |------------------|----------------------------------------------------------|-------------|-------|
@@ -64,20 +62,11 @@ be adapted to any framework of your choice. Each template includes a simple exam
 This documentation will walk you through how to set up and deploy an agentic workflow using one of the available templates.
 This process consists of the following steps:
 
-1. Cloning the repository
-2. Installing prerequisites
-3. 
-4. Getting the repository
-5. Testing the agent locally
-6. Deploying the agent to DataRobot
-7. Testing the deployed agent
-8. Developing the agent
+1. Installing [prerequisites](getting-started-prerequisites.md)
+2. [Get started](/docs/getting-started.md)
+3. [Developing your agent](/docs/developing-agents.md)
 
-
-
-
-
-## Cloning the repository
+# Cloning the repository
 #### For cloud users:
 _Clone the repository to your local machine using Git or you can 
 [download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip)._
