@@ -48,7 +48,8 @@ If you are new to developing agentic workflows in DataRobot, we recommend starti
 
 # Available templates
 
-This repository includes templates for three popular agent frameworks and a generic base template that can be adapted to any framework of your choice.Each template includes a simple example agentic workflow with 3 agents and 3 tasks.
+This repository includes templates for three popular agent frameworks and a generic base template that can be adapted to any framework of your choice.
+Each template includes a simple example agentic workflow with 3 agents and 3 tasks.
 
 | Framework        | Description                                              | GitHub Repo | Docs  |
 |------------------|----------------------------------------------------------|-------------|-------|

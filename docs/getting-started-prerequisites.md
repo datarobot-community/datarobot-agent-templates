@@ -15,14 +15,18 @@
 # Installing prerequisites
 
 ```diff
-- IMPORTANT: The [DataRobot Agent Templates](https://github.com/datarobot-community/datarobot-agent-templates) repository is only compatible with **macOS** and **Linux** operating systems. **Windows** is not supported at this time. **If you are using Windows**, please consider using a [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html) Windows Subsystem for Linux (WSL) or a virtual machine running a supported OS.
+- IMPORTANT: This repository is only compatible with macOS and Linux operating systems&mdash;Windows is not supported at this time.
 ```
 
-Before getting started, ensure you have the following tools installed on your system. You can use `brew` (on macOS) or your preferred package manager on Linux.
-Please ensure your local tools are at or above the minimum versions required.
+If you are using Windows, please consider using a [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html) Windows Subsystem for Linux (WSL) or a virtual machine running a supported OS.
+
+Before getting started, ensure you have the following tools installed and on your system at the required version (or newer).
 It is **recommended to install the tools system-wide** rather than in a virtual environment to ensure they are available in your terminal session.
+Refer to the [Installation instructions](#installation-instructions) section for more details.
 
 ## Prerequisite tools
+
+**[More information and diagrams about these tools are available here.](/docs/uv-task-pulumi.md)**
 
 | Tool         | Version    | Description                     | Installation guide                                                                      |
 |--------------|------------|---------------------------------|-----------------------------------------------------------------------------------------|
@@ -34,11 +38,8 @@ It is **recommended to install the tools system-wide** rather than in a virtual 
 > **IMPORTANT:** You will also need a compatible C++ compiler and build tools installed on your system to compile some
 > Python packages. See the installation instructions below for more details for your OS.
 
-**[More information and diagrams about this stack are available here.](/docs/uv-task-pulumi.md)**
-
 ## Installation instructions
-The following sections provide common installation instructions for each tool, but please refer to the official
-documentation links above for the most up-to-date instructions.
+The following sections provide common installation instructions for each tool, but please refer to the official documentation links above for the most up-to-date instructions.
 
 > **NOTE:** You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
 > after installation to ensure the tools are available in your terminal session.
@@ -46,10 +47,10 @@ documentation links above for the most up-to-date instructions.
 - [Installing prerequisites](#installing-prerequisites)
   - [Prerequisite tools](#prerequisite-tools)
   - [Installation instructions](#installation-instructions)
-  - [MacOS](#macos)
-  - [Linux](#linux)
+    - [MacOS](#macos)
+    - [Linux](#linux)
 
-## MacOS
+### MacOS
 The easiest way to install the required tools on macOS is using [Homebrew](https://brew.sh/). If you don't have 
 Homebrew installed, you can install it by following the instructions on the [Homebrew website](https://brew.sh/).
 
@@ -80,7 +81,7 @@ official documentation links](#prerequisite-tools) and websites above for the mo
   xcode-select --install
   ```
   
-## Linux
+### Linux
 The easiest way to install the required tools on Linux is using `curl` to download and run the installation scripts.
 Please refer to the official documentation links above for the most up-to-date instructions.
 
