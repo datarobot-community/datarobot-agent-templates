@@ -14,7 +14,7 @@
 
 # Installing prerequisites
 
-```
+```diff
 - The [DataRobot Agent Templates](https://github.com/datarobot-community/datarobot-agent-templates) repository is only compatible with **macOS** and **Linux** operating systems. **Windows** is not supported at this time.
 
 - **If you are using Windows**, please consider using a [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html) Windows Subsystem for Linux (WSL) or a virtual machine running a supported OS.
