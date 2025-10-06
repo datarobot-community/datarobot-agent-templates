@@ -24,15 +24,20 @@ The workflow produces a Markdown document about your specified topic.
 
 ### Step 1: Clone the repository
 
-Clone the repository to your local machine:
-
+#### For cloud users:
+_Clone the repository to your local machine using Git or you can 
+[download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip)._
 ```bash
 git clone https://github.com/datarobot-community/datarobot-agent-templates.git
 cd datarobot-agent-templates
 ```
 
-For on-premise users, clone the correct branch for your release 
-(e.g. `git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent-templates.git`).
+#### For on-premise users:
+_Clone the release branch for your installation using Git:_
+```bash
+git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent-templates.git
+cd datarobot-agent-templates
+```
 
 > **NOTE:** To customize or track your own workflows, you can 
 > [fork this repository](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo), 

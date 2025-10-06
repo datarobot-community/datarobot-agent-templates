@@ -66,20 +66,6 @@ This process consists of the following steps:
 2. [Get started](/docs/getting-started.md)
 3. [Developing your agent](/docs/developing-agents.md)
 
-# Cloning the repository
-#### For cloud users:
-_Clone the repository to your local machine using Git or you can 
-[download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip)._
-```bash
-git clone https://github.com/datarobot-community/datarobot-agent-templates.git
-```
-
-#### For on-premise users:
-_Clone the release branch for your installation using Git:_
-```bash
-git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent-templates.git
-```
-
 ## Get help
 
 If you encounter issues or have questions, use one of the following options:

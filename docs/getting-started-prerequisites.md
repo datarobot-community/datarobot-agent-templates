@@ -26,12 +26,12 @@ versions required. It is **recommended to install the tools system-wide** rather
 they are available in your terminal session.
 
 ### Prerequisite tools
-| Tool | Version | Description | Installation guide |
-|------|---------|-------------|-------------------|
-| **git** | >= 2.30.0 | A version control system. | [git installation guide](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) |
-| **uv** | >= 0.6.10 | A Python package manager. | [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/) |
-| **Pulumi** | >= 3.163.0 | An Infrastructure as Code tool. | [Pulumi installation guide](https://www.pulumi.com/docs/iac/download-install/) |
-| **Taskfile** | >= 3.43.3 | A task runner. | [Taskfile installation guide](https://taskfile.dev/docs/installation) |
+| Tool         | Version    | Description                     | Installation guide                                                                      |
+|--------------|------------|---------------------------------|-----------------------------------------------------------------------------------------|
+| **git**      | >= 2.30.0  | A version control system.       | [git installation guide](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) |
+| **uv**       | >= 0.6.10  | A Python package manager.       | [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/)        |
+| **Pulumi**   | >= 3.163.0 | An Infrastructure as Code tool. | [Pulumi installation guide](https://www.pulumi.com/docs/iac/download-install/)          |
+| **Taskfile** | >= 3.43.3  | A task runner.                  | [Taskfile installation guide](https://taskfile.dev/docs/installation)                   |
 
 > **IMPORTANT:** You will also need a compatible C++ compiler and build tools installed on your system to compile some
 > Python packages. See the installation instructions below for more details for your OS.
@@ -45,8 +45,11 @@ documentation links above for the most up-to-date instructions.
 > **NOTE:** You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
 > after installation to ensure the tools are available in your terminal session.
 
-- [MacOS Installation Instructions](#macos)
-- [Linux Installation Instructions](#linux)
+- [Prerequisites](#prerequisites)
+    - [Prerequisite tools](#prerequisite-tools)
+  - [Installation instructions](#installation-instructions)
+  - [MacOS](#macos)
+  - [Linux](#linux)
 
 ## MacOS
 The easiest way to install the required tools on macOS is using [Homebrew](https://brew.sh/). If you don't have 
