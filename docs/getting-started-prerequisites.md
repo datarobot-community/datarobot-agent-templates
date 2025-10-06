@@ -1,4 +1,5 @@
 ### DataRobot Agent Templates Navigation
+
 - [Home](/README.md)
 - [Prerequisites](/docs/getting-started-prerequisites.md)
 - [Getting started](/docs/getting-started.md)
@@ -11,21 +12,20 @@
   - [Adding tools to your agent](/docs/developing-agents-tools.md)
 ---
 
-# Prerequisites
+# Installing prerequisites
 
-> The [DataRobot Agent Templates](https://github.com/datarobot-community/datarobot-agent-templates) repository is only 
-> compatible with **macOS** and **Linux** operating systems. **Windows** is not supported at this time.
-> 
-> **If you are using Windows**, please consider using a 
-> [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html) Windows Subsystem for Linux (WSL) or a virtual machine
-> running a supported OS.
+```
+- The [DataRobot Agent Templates](https://github.com/datarobot-community/datarobot-agent-templates) repository is only compatible with **macOS** and **Linux** operating systems. **Windows** is not supported at this time.
 
-Before getting started, ensure you have the following tools installed on your system. You can use `brew` (on macOS) 
-or your preferred package manager on Linux. Please ensure your local tools are at or above the minimum
-versions required. It is **recommended to install the tools system-wide** rather than in a virtual environment to ensure
-they are available in your terminal session.
+- **If you are using Windows**, please consider using a [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html) Windows Subsystem for Linux (WSL) or a virtual machine running a supported OS.
+```
 
-### Prerequisite tools
+Before getting started, ensure you have the following tools installed on your system. You can use `brew` (on macOS) or your preferred package manager on Linux.
+Please ensure your local tools are at or above the minimum versions required.
+It is **recommended to install the tools system-wide** rather than in a virtual environment to ensure they are available in your terminal session.
+
+## Prerequisite tools
+
 | Tool         | Version    | Description                     | Installation guide                                                                      |
 |--------------|------------|---------------------------------|-----------------------------------------------------------------------------------------|
 | **git**      | >= 2.30.0  | A version control system.       | [git installation guide](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) |
@@ -45,8 +45,8 @@ documentation links above for the most up-to-date instructions.
 > **NOTE:** You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
 > after installation to ensure the tools are available in your terminal session.
 
-- [Prerequisites](#prerequisites)
-    - [Prerequisite tools](#prerequisite-tools)
+- [Installing prerequisites](#installing-prerequisites)
+  - [Prerequisite tools](#prerequisite-tools)
   - [Installation instructions](#installation-instructions)
   - [MacOS](#macos)
   - [Linux](#linux)
