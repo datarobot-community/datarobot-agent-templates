@@ -1,6 +1,7 @@
 ### DataRobot Agent Templates Navigation
+
 - [Home](/README.md)
-- [Prerequisites](/docs/getting-started-prerequisites.md)
+- [Installing prerequisites](/docs/getting-started-prerequisites.md)
 - [Getting started](/docs/getting-started.md)
 - [Updating Agentic Templates](/docs/getting-started-updating.md)
 - Developing Agents
@@ -9,31 +10,40 @@
   - [Adding python requirements](/docs/developing-agents-python-requirements.md)
   - [Configuring LLM providers](/docs/developing-agents-llm-providers.md)
   - [Adding tools to your agent](/docs/developing-agents-tools.md)
+
 ---
 
 # Getting started
 
-> **NOTE:** Please ensure all [prerequisites](/docs/getting-started-prerequisites.md) are installed before proceeding.
+```diff
+-IMPORTANT: Please ensure all prerequisites are installed before proceeding.
+```
 
-This guide walks you through setting up a document creation workflow using one of the provided templates. The example workflow contains 3 agents:
-- **Researcher Agent:** Gathers information on a given topic using web search
-- **Writer Agent:** Creates a document based on the research
-- **Editor Agent:** Reviews and edits the document for clarity and correctness
+This guide walks you through setting up a document creation workflow using one of the provided templates.
+<!-- what is a document creation workflow? Shouldn't this be "agentic workflow"? -->
+The example workflow contains 3 agents:
 
-The workflow produces a Markdown document about your specified topic.
+- **Researcher**: Gathers information on a given topic using web search
+- **Writer**: Creates a document based on the research
+- **Editor**: Reviews and edits the document for clarity and correctness
+
+The workflow produces a Markdown (`.md`) document about your specified topic.
 
 ### Step 1: Clone the repository
 
-#### For cloud users:
-_Clone the repository to your local machine using Git or you can 
-[download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip)._
+#### For cloud users
+
+You can either clone the repository to your local machine using Git or [download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip).
+
 ```bash
 git clone https://github.com/datarobot-community/datarobot-agent-templates.git
 cd datarobot-agent-templates
 ```
 
-#### For on-premise users:
-_Clone the release branch for your installation using Git:_
+#### For on-premise users
+
+Clone the release branch for your installation using Git:
+
 ```bash
 git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent-templates.git
 cd datarobot-agent-templates
