@@ -29,9 +29,9 @@ The example workflow contains 3 agents:
 
 The workflow produces a Markdown (`.md`) document about your specified topic.
 
-### Step 1: Clone the repository
+## Clone the repository
 
-#### For cloud users
+### For cloud users
 
 You can either clone the repository to your local machine using Git or [download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip).
 
@@ -40,7 +40,7 @@ git clone https://github.com/datarobot-community/datarobot-agent-templates.git
 cd datarobot-agent-templates
 ```
 
-#### For on-premise users
+### For on-premise users
 
 Clone the release branch for your installation using Git:
 
@@ -49,39 +49,58 @@ git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent
 cd datarobot-agent-templates
 ```
 
+<!-- Maybe move this to later? -->
 > **NOTE:** To customize or track your own workflows, you can 
 > [fork this repository](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo), 
 > [change the remote URL](https://docs.github.com/en/get-started/git-basics/managing-remote-repositories), or 
 > [create a new repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository).
 
-### Step 2: Configure environment variables
+## Locate your DataRobot API key and endpoint
+
+The section after this will require you to add your DataRobot API key and endpoint to your environment variables.
+Follow the steps below to locate them.
+For full details, see the [DataRobot API keys documentation](https://docs.datarobot.com/en/docs/get-started/acct-mgmt/acct-settings/api-key-mgmt.html).
+
+1. Log in to your DataRobot account.
+2. Click the user icon in the top right of the UI and select **API keys and tools**.
+
+  ![](./img/api-keys-tools.png)
+
+3. Copy your DataRobot API endpoint and paste it into a temporary file.
+
+  ![](./img/api-endpoint.png)
+
+4. Copy your DataRobot API key and paste it into the temporary file as well.
+
+  ![](./img/api-key.png)
+
+Continue with the next section to configure your environment variables.
+
+## Configure environment variables
 
 Create an `.env` file in the root directory before running any commands:
 
-```bash
-# Copy the sample environment file
-cp .env.sample .env
+1. Copy the sample environment file.
 
-# Edit the file with your preferred editor
-nano .env  # or vim .env, code .env, etc.
-```
+  ```bash
+  cp .env.sample .env
+  ```
 
-Your `.env` file must contain these variables. Leave other variables at their default values during setup:
+2. Edit the file with your preferred text editor.
+
+  ```bash
+  nano .env  # or vim .env, code .env, etc.
+  ```
+
+1. Insert the DataRobot API key and endpoint that you copied in the previous section into your `.env` file. Leave other variables at their default values during setup.
 
 ```bash
 # DataRobot API keys and endpoint
-DATAROBOT_API_TOKEN=<Your API Token>
-DATAROBOT_ENDPOINT=https://app.datarobot.com/api/v2 # Or your datarobot endpoint
+DATAROBOT_API_TOKEN=<Your API key>
+DATAROBOT_ENDPOINT=<Your API endpoint>
 ```
 
-**API Token:** Generate from the DataRobot UI → your user profile → "API Tokens". See the 
-[DataRobot API keys documentation](https://docs.datarobot.com/en/docs/get-started/acct-mgmt/acct-settings/api-key-mgmt.html) for details.
-
-**Endpoint:**
-- **Cloud users:** Use https://app.datarobot.com/api/v2, https://app.eu.datarobot.com/api/v2, or https://app.jp.datarobot.com/api/v2
-- **On-premise users:** Use your environment's endpoint or contact support
-
-### Step 3: Start and choose an agent framework
+## Start and choose an agent framework
 
 Run the helper script to start development:
 
