@@ -337,7 +337,7 @@ class MyAgent:
         )
 
     def task_edit(self, state: MessagesState) -> Command[Any]:
-        result = self.agent_planner.invoke(state)
+        result = self.agent_editor.invoke(state)
         result["messages"][-1] = HumanMessage(
             content=result["messages"][-1].content, name="editor_node"
         )

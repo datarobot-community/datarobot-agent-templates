@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+- Fix LangGraph agent `task_edit` to use the editor agent
+
 ## 11.2.4
 - Add support for streaming in agentic workflows
 - Add support for streaming to the agent:cli tools
