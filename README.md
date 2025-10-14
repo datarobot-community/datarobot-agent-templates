@@ -26,8 +26,8 @@
   </a>
 </p>
 
-This repository provides ready-to-use templates for building and deploying AI agents with multi-agent frameworks.
-Agentic templates streamline the process of setting up new agents with minimal configuration requirements.
+This repository provides ready-to-use templates for building and deploying agentic workflows with multi-agent frameworks.
+Agentic templates streamline the process of setting up new workflows with minimal configuration requirements.
 They support local development and testing, as well as deployment to production environments within DataRobot.
 
 The full table of contents is available below, but you can also go directly to the [Quick Start](#quick-start) section to get started.

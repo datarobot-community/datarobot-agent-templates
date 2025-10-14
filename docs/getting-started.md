@@ -19,9 +19,9 @@
 -IMPORTANT: Please ensure all prerequisites are installed before proceeding.
 ```
 
-This guide walks you through setting up a document creation workflow using one of the provided templates.
-<!-- what is a document creation workflow? Shouldn't this be "agentic workflow"? -->
-The example workflow contains 3 agents:
+This guide walks you through setting up an agentic workflow using one of several provided templates.
+This workflow returns a Markdown (`.md`) document about your specified topic based on the research of a series of agents.
+In this case, the example workflow contains 3 agents:
 
 - **Researcher**: Gathers information on a given topic using web search
 - **Writer**: Creates a document based on the research
@@ -92,7 +92,7 @@ Create an `.env` file in the root directory before running any commands:
   nano .env  # or vim .env, code .env, etc.
   ```
 
-1. Insert the DataRobot API key and endpoint that you copied in the previous section into your `.env` file. Leave other variables at their default values during setup.
+3. Insert the DataRobot API key and endpoint that you copied in the previous section into your `.env` file. Leave other variables at their default values during setup.
 
 ```bash
 # DataRobot API keys and endpoint
@@ -108,37 +108,41 @@ Run the helper script to start development:
 task start
 ```
 
-> **NOTE:** If you encounter errors with `task start` or `task install`, ensure you've completed all 
-> [Prerequisites](/docs/getting-started-prerequisites.md) steps.
+> **NOTE:** If you encounter errors with `task start`, ensure you've completed all [prerequisite](/docs/getting-started-prerequisites.md) steps.
 
-This repository includes four templates, which are selected during the `task start` process:
+Specify which of the four available templates you would like to use during the `task start` process:
 
-| Directory | Framework | Description |
-|-----------|-----------|-------------|
-| `agent_crewai` | CrewAI | Role-based multi-agent collaboration framework |
-| `agent_generic_base` | Generic | Base template for any framework |
-| `agent_langgraph` | LangGraph | State-based orchestration framework |
-| `agent_llamaindex` | Llama-Index | RAG-focused framework |
+| Directory            | Framework   | Description                                    |
+|----------------------|-------------|------------------------------------------------|
+| `agent_crewai`       | CrewAI      | Role-based multi-agent collaboration framework |
+| `agent_generic_base` | Generic     | Base template for any framework                |
+| `agent_langgraph`    | LangGraph   | State-based orchestration framework            |
+| `agent_llamaindex`   | Llama-Index | RAG-focused framework                          |
 
-Complete the prompts to select your framework. Then finish the initial setup. After selection, only relevant template files remain. **To switch frameworks later, re-clone the repository or copy the desired framework directory from a fresh clone**.
+After selection, setup will finish, leaving only files relevant to the template specified in your branch.
+**To switch frameworks later, re-clone the repository and run the steps above again**.
 
-After running `task start`, use `task` from the root directory to see available commands.
+> **NOTE**: Run `task` (with no parameters) from the root directory to see all available commands.
+> Aside from `start`, none are necessary to complete the QuickStart.
 
-> **IMPORTANT:** Run `task install` as prompted during quickstart to install and set up the agent and infrastructure environments.
+## Test your agent for local development
 
-### Step 4: Test your agent for local development
+Now your agent is ready to be tested locally using the CLI.
+Local testing requires a DataRobot connection for LLM communication.
+Ensure your `.env` file has the correct API token and endpoint, as detailed in [#Configure environment variables](#configure-environment-variables).
 
-Test your agent locally using the CLI. Local testing requires DataRobot connection for LLM communication. Ensure your `.env` file has the correct API token and endpoint.
+Run the following command to test your agent:
 
 ```bash
 task agent:cli -- execute --user_prompt 'Tell me about Generative AI'
 ```
 
-You can now modify agent code and test locally. Continue to the next step to deploy and test in a production-like environment.
+You can now modify agent code and test locally.
+Continue to the next step to deploy and test in a production-like environment.
 
-### Step 5: Deploy your agent to DataRobot
+## Deploy your agent to DataRobot
 
-Deploy your agent to DataRobot:
+Next, deploy your agent to DataRobot:
 
 ```bash
 task deploy
@@ -150,7 +154,7 @@ task deploy
 - Review the pulumi preview and approve changes by typing `yes` or pressing `Enter`
 - Deployment takes several minutes. When complete, you'll see a resource summary with important IDs/URLs
 
-### Step 6: Test your deployed agent
+## Test your deployed agent
 
 Test your deployed agent using the CLI with the deployment ID shown after deployment:
 

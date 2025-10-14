@@ -19,7 +19,7 @@
 -IMPORTANT: This repository is only compatible with macOS and Linux operating systems.
 ```
 
-If you are using Windows, please consider using a [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html) Windows Subsystem for Linux (WSL) or a virtual machine running a supported OS.
+If you are using Windows, consider using a [DataRobot Codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html), Windows Subsystem for Linux (WSL), or a virtual machine running a supported OS.
 
 Ensure you have the following tools installed and on your system at the required version (or newer).
 It is **recommended to install the tools system-wide** rather than in a virtual environment to ensure they are available in your terminal session.
