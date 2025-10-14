@@ -83,7 +83,7 @@ tasks:
     cmds:
       - echo "Building Docker image"
       - cp pyproject.toml docker_context/pyproject.toml
-      - cd docker_context && docker build  --platform linux/amd64 -f Dockerfile -t agent_generic_base:latest .
+      - cd docker_context && docker build --platform linux/amd64 -f Dockerfile -t agent_generic_base:latest .
       - echo "Saving Docker image"
       - docker save agent_generic_base:latest | gzip -1 > docker_context.tar.gz
     silent: true

@@ -143,8 +143,9 @@ class TestMyAgentBase:
             ],
             "environment_var": True,
         }
-        assert agent.run(completion_create_params) == (
+        assert agent.invoke(completion_create_params) == (
             "success",
+            None,
             {"completion_tokens": 0, "prompt_tokens": 0, "total_tokens": 0},
         )
 
@@ -163,9 +164,10 @@ class TestMyAgentBase:
             "messages": [{"role": "user", "content": "Artificial Intelligence"}],
             "environment_var": True,
         }
-        result = agent.run(completion_create_params)
+        result = agent.invoke(completion_create_params)
         assert result == (
             "success",
+            None,
             {"completion_tokens": 0, "prompt_tokens": 0, "total_tokens": 0},
         )
 

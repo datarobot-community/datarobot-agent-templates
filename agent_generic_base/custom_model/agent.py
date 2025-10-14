@@ -13,9 +13,10 @@
 # limitations under the License.
 import os
 import re
-from typing import Any, Optional, Union
+from typing import Any, Generator, Optional, Union
 
 from openai.types.chat import CompletionCreateParams
+from ragas import MultiTurnSample
 
 
 class MyAgent:
@@ -60,17 +61,26 @@ class MyAgent:
         elif isinstance(verbose, bool):
             self.verbose = verbose
 
-    def run(
+    def invoke(
         self, completion_create_params: CompletionCreateParams
-    ) -> tuple[str, dict[str, int]]:
+    ) -> Union[
+        Generator[tuple[str, Any | None, dict[str, int]], None, None],
+        tuple[str, Any | None, dict[str, int]],
+    ]:
         """Run the agent with the provided completion parameters.
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
 
         Args:
             completion_create_params: The completion request parameters including input topic and settings.
+        Args:
+            completion_create_params: The completion request parameters including input topic and settings.
         Returns:
-            tuple[list[Any], dict[str, int]]: A tuple containing a list of messages (events) and usage_statistics for agentic metrics.
+            Union[
+                Generator[tuple[str, Any | None, dict[str, int]], None, None],
+                tuple[str, Any | None, dict[str, int]],
+            ]: For streaming requests, returns a generator yielding tuples of (response_text, pipeline_interactions, usage_metrics).
+               For non-streaming requests, returns a single tuple of (response_text, pipeline_interactions, usage_metrics).
         """
         # Retrieve the starting user prompt from the CompletionCreateParams
         user_messages = [
@@ -85,14 +95,53 @@ class MyAgent:
         # Print commands may need flush=True to ensure they are displayed in real-time.
         print("Running agent with user prompt:", user_prompt_content, flush=True)
 
-        # Here you would implement the logic of your agent using the inputs.
-
-        usage = {
+        usage_metrics = {
             "completion_tokens": 0,
             "prompt_tokens": 0,
             "total_tokens": 0,
         }
-        return "success", usage
+
+        # The following code demonstrate both a synchronous and streaming response.
+        # You can choose one or the other based on your use case, they function the same.
+        # The main difference is returning a generator for streaming or a final response for sync.
+        if completion_create_params.get("stream"):
+            # Streaming response: yield each message as it is generated
+            def stream_generator() -> Generator[
+                tuple[str, Any | None, dict[str, int]], None, None
+            ]:
+                # -----------------------------------------------------------
+                # Here you would implement the streaming logic of your agent using the inputs.
+                # -----------------------------------------------------------
+                yield "streaming success", None, usage_metrics
+
+                # Create a list of events from the event listener
+                events: list[
+                    Any
+                ] = []  # This should be populated with the agent's events/messages
+
+                pipeline_interactions = self.create_pipeline_interactions_from_events(
+                    events
+                )
+                # Final response after streaming is complete
+                yield "", pipeline_interactions, usage_metrics
+
+            return stream_generator()
+        else:
+            # -----------------------------------------------------------
+            # Here you would implement the logic of your agent using the inputs.
+            # -----------------------------------------------------------
+            response_text = "success"
+
+            # Create a list of events from the event listener
+            events: list[
+                Any
+            ] = []  # This should be populated with the agent's events/messages
+
+            pipeline_interactions = self.create_pipeline_interactions_from_events(
+                events
+            )
+
+            return response_text, pipeline_interactions, usage_metrics
 
     @property
     def llm(self) -> Any:
@@ -115,3 +164,16 @@ class MyAgent:
         if self.api_base:
             return re.sub(r"api/v2/?$", "", self.api_base)
         return "https://api.datarobot.com"
+
+    @staticmethod
+    def create_pipeline_interactions_from_events(
+        events: list[Any],
+    ) -> MultiTurnSample | None:
+        """Convert a list of events into a MultiTurnSample.
+
+        Creates the pipeline interactions for moderations and evaluation
+        (e.g. Task Adherence, Agent Goal Accuracy, Tool Call Accuracy)
+        """
+        if not events:
+            return None
+        return MultiTurnSample(user_input=events)

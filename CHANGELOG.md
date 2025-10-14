@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.2.4
+- Add support for streaming in agentic workflows
+- Add support for streaming to the agent:cli tools
+- Update CLI documentation to include streaming and non-streaming commands
+- Add built-in streaming support to langgraph template
+- Fix issue with URLs related to deployments not always previously working
+- Rename `def run` in agents to `def invoke` to conform better with other frameworks
+- Refactor agents to use a unified return response from `invoke`
+- Reduce confusing response formatting and remove unneeded helper functions
+- Update package versions
+- Add initial NAT package support to framework
+- Add example documentation for calling deployed agents and using streaming
+
 ## 11.2.3
 - Fix connecting to llm documentation
 - Optimize agent startup time

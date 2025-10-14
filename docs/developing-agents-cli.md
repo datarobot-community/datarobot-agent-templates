@@ -112,6 +112,7 @@ Commands:
 ### Using the CLI to test your local agent
 The following are common examples of how to use the CLI to test your agent on your local environment.
 
+#### Non-Streaming execution
 ```bash
 # Run the agent with a string sent as the user prompt
 > task agent:cli -- execute --user_prompt "Artificial Intelligence"
@@ -122,6 +123,18 @@ The following are common examples of how to use the CLI to test your agent on yo
 > task agent:cli -- execute --user_prompt '{"topic": "Artificial Intelligence"}'
 ```
 
+#### Streaming execution
+```bash
+# Run the agent with a string sent as the user prompt
+> task agent:cli -- execute --user_prompt "Artificial Intelligence" --stream
+```
+
+The agent will be executed using a streaming response. To see the full output of streaming responses after execution
+you can view the `execute_output.json` or use the `--show_output` flag. By default only the final message will be
+printed after execution when streaming to increase readability in the terminal.
+
+
+#### Full JSON body execution
 ```bash
 # Run the agent with a JSON file containing the full chat completion json
 > task agent:cli -- execute --completion_json example-completion.json
@@ -130,6 +143,8 @@ The following are common examples of how to use the CLI to test your agent on yo
 If you are using the `completion_json` option, the JSON file should contain a full chat completion request.
 An example json is provided in the `example-completion.json` file. An example of the JSON structure is shown below.
 You can pass additional parameters as needed using the `extra_body` field.
+
+You can add `stream` to the json fields to define streaming or non-streaming responses.
 
 ```json
 {

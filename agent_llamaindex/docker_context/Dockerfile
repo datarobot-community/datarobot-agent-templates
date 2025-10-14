@@ -73,6 +73,7 @@ RUN apk add --no-cache uv graphviz openblas openssh-server gzip zip unzip curl \
 RUN apk add --no-cache rust sqlite
 
 ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPYCACHEPREFIX=/tmp/.python_cache \
     UV_COMPILE_BYTECODE=1 \
     VENV_PATH=${VENV_PATH} \
@@ -133,13 +134,12 @@ ENV ANNOY_COMPILER_ARGS="-D_CRT_SECURE_NO_WARNINGS,-DANNOYLIB_MULTITHREADED_BUIL
 
 ARG WORKDIR
 ARG VENV_PATH
-ARG EXT=""
 
-COPY ./pyproject.toml${EXT} ${WORKDIR}/pyproject.toml
+COPY ./pyproject.toml ${WORKDIR}/pyproject.toml
 
 WORKDIR ${WORKDIR}
 RUN . ${VENV_PATH}/bin/activate && \
-    uv sync --no-cache
+    uv sync
 WORKDIR /
 
 # Copy agent runtime into work directory

@@ -126,6 +126,59 @@ the custom model and a production deployment (`DEPLOY=1`). If not set, Pulumi de
 
 Pulumi will prompt you to confirm the resources to be created or updated.
 
+## Calling deployed agent using OpenAI Clients
+You can use the OpenAI python client to easily send and receive commands to your deployed agentic workflows.
+The following code can be used as a template for interacting with an agent in `non-streaming` or `streaming`
+calls.
+
+```python
+from openai import OpenAI
+
+# Configure your prompts
+system_prompt = "Explain your thoughts using at least 100 words."
+user_prompt = "What would it take to colonize Mars?"
+stream = False # Set to true for streaming results, if supported
+
+# Replace with your actual deployment details
+DEPLOYMENT_ID = "<YOUR DEPLOYMENT ID HERE>"
+API_KEY = "<YOUR API KEY HERE>"
+
+# Initialize the OpenAI client for DataRobot deployment
+openai_client = OpenAI(
+    # Optionally, change this url to your DataRobot instance
+    base_url=f"https://app.datarobot.com/api/v2/deployments/{DEPLOYMENT_ID}/",
+    api_key=API_KEY,
+    _strict_response_validation=False
+)
+
+print(f"Sending prompt: \"{user_prompt}\"")
+
+# Create completion request
+completion = openai_client.chat.completions.create(
+    model="datarobot-deployed-llm",  # Model name your agent will receive
+    messages=[
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ],
+    max_tokens=512,  # Optional: omit to use model's default
+    stream=stream,
+)
+
+if stream:
+    # Streaming mode: print chunks as they arrive
+    print("Response: ", end='')
+    for chunk in completion:
+        if (hasattr(chunk, 'choices') and chunk.choices and 
+            hasattr(chunk.choices[0], 'delta')):
+            delta = chunk.choices[0].delta
+            if hasattr(delta, 'content') and delta.content:
+                print(delta.content, end='', flush=True)
+    print()  # Add newline after streaming output
+else:
+    # Non-streaming mode: print complete response
+    print(f"Response: {completion.choices[0].message.content}")
+```
+
 ## Next steps
 
 After deployment, your agent will be available in your DataRobot environment. You can:

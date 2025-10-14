@@ -26,6 +26,7 @@ from openai.types.chat import (
 )
 from openai.types.chat.completion_create_params import (
     CompletionCreateParamsNonStreaming,
+    CompletionCreateParamsStreaming,
 )
 
 
@@ -45,30 +46,48 @@ class Kernel:
         }
 
     def construct_prompt(
-        self, user_prompt: str, verbose: bool
-    ) -> CompletionCreateParamsNonStreaming:
+        self, user_prompt: str, verbose: bool, stream: bool = False
+    ) -> CompletionCreateParamsNonStreaming | CompletionCreateParamsStreaming:
         extra_body = {
             "api_key": self.api_token,
             "api_base": self.base_url,
             "verbose": verbose,
         }
-        completion_create_params = CompletionCreateParamsNonStreaming(
-            model="datarobot-deployed-llm",
-            messages=[
-                ChatCompletionSystemMessageParam(
-                    content="You are a helpful assistant",
-                    role="system",
-                ),
-                ChatCompletionUserMessageParam(
-                    content=user_prompt,
-                    role="user",
-                ),
-            ],
-            n=1,
-            temperature=0.01,
-            extra_body=extra_body,  # type: ignore[typeddict-unknown-key]
-        )
-        return completion_create_params
+        if stream:
+            return CompletionCreateParamsStreaming(
+                model="datarobot-deployed-llm",
+                messages=[
+                    ChatCompletionSystemMessageParam(
+                        content="You are a helpful assistant",
+                        role="system",
+                    ),
+                    ChatCompletionUserMessageParam(
+                        content=user_prompt,
+                        role="user",
+                    ),
+                ],
+                n=1,
+                temperature=0.01,
+                stream=True,
+                extra_body=extra_body,  # type: ignore[typeddict-unknown-key]
+            )
+        else:
+            return CompletionCreateParamsNonStreaming(
+                model="datarobot-deployed-llm",
+                messages=[
+                    ChatCompletionSystemMessageParam(
+                        content="You are a helpful assistant",
+                        role="system",
+                    ),
+                    ChatCompletionUserMessageParam(
+                        content=user_prompt,
+                        role="user",
+                    ),
+                ],
+                n=1,
+                temperature=0.01,
+                extra_body=extra_body,  # type: ignore[typeddict-unknown-key]
+            )
 
     def load_completion_json(
         self, completion_json: str
@@ -93,13 +112,16 @@ class Kernel:
         completion_json: str = "",
         custom_model_dir: str = "",
         output_path: str = "",
+        stream: bool = False,
     ) -> tuple[str, str]:
         if len(user_prompt) == 0 and len(completion_json) == 0:
             raise ValueError("user_prompt or completion_json must provided.")
 
         # Construct the raw prompt and headers
         if len(user_prompt) > 0:
-            completion_create_params = self.construct_prompt(user_prompt, verbose=True)
+            completion_create_params = self.construct_prompt(
+                user_prompt, verbose=True, stream=stream
+            )
         else:
             completion_create_params = self.load_completion_json(completion_json)
         chat_completion = json.dumps(completion_create_params)
@@ -142,9 +164,10 @@ class Kernel:
         completion_json: str = "",
         custom_model_dir: str = "",
         output_path: str = "",
+        stream: bool = False,
     ) -> Any:
         command_args, output_path = self.validate_and_create_execute_args(
-            user_prompt, completion_json, custom_model_dir, output_path
+            user_prompt, completion_json, custom_model_dir, output_path, stream
         )
 
         local_cmd = f"python3 run_agent.py {command_args}"
@@ -285,24 +308,37 @@ def display_response(response: Union[str, ChatCompletion], show_output: bool) ->
     with open("execute_output.json", "w") as json_file:
         json.dump(response_json, json_file, indent=2)
 
-    if "pipeline_interactions" in response_json:
+    if isinstance(response_json, list):
+        for item in response_json:
+            if "pipeline_interactions" in item:
+                item["pipeline_interactions"] = "[Truncated for display]"
+    elif "pipeline_interactions" in response_json:
         response_json["pipeline_interactions"] = "[Truncated for display]"
 
     if show_output:
         click.echo("\nStored execution result:")
         click.echo(json.dumps(response_json, indent=2))
     else:
+        if isinstance(response_json, list):
+            response_json = response_json[-1]
+
         if "choices" in response_json:
             response_json["choices"] = "[Truncated for display]"
 
         # Show only first 200 characters of response
         click.echo("\nStored execution result preview:")
         click.echo(json.dumps(response_json, indent=2))
+        click.echo("")
+        click.echo("IMPORTANT")
         click.echo(
-            f"To view the full result run `cat {os.path.abspath('execute_output.json')}`."
+            "This is a preview of the json result, or only the final message if streaming is enabled."
         )
         click.echo(
-            "To display the full result inline, rerun with the --show_output flag."
+            f"To view the full result (including all streaming responses) run "
+            f"`cat {os.path.abspath('execute_output.json')}`."
+        )
+        click.echo(
+            "To display the full result inline, rerun with the `--show_output` flag."
         )
 
 
@@ -346,8 +382,13 @@ def cli(
 @click.option(
     "--show_output", is_flag=True, help="Show the full stored execution result."
 )
+@click.option("--stream", is_flag=True, help="Enable streaming response.")
 def execute(
-    environment: Any, user_prompt: str, completion_json: str, show_output: bool
+    environment: Any,
+    user_prompt: str,
+    completion_json: str,
+    show_output: bool,
+    stream: bool,
 ) -> None:
     """Execute agent code locally using OpenAI completions.
 
@@ -355,6 +396,9 @@ def execute(
 
     # Run the agent with a string user prompt
     > task cli -- execute --user_prompt "Artificial Intelligence"
+
+    # Run the agent with streaming enabled
+    > task cli -- execute --user_prompt "Artificial Intelligence" --stream
 
     # Run the agent with a string user prompt and show full output
     > task cli -- execute --user_prompt "Artificial Intelligence" --show_output
@@ -372,6 +416,7 @@ def execute(
     response = environment.interface.local(
         user_prompt=user_prompt,
         completion_json=completion_json,
+        stream=stream,
     )
     display_response(response, show_output)
 

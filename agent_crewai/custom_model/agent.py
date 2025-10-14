@@ -13,12 +13,14 @@
 # limitations under the License.
 import os
 import re
-from typing import Any, Optional, Union
+from typing import Any, Generator, Optional, Union
+from urllib.parse import urljoin, urlparse
 
-from crewai import LLM, Agent, Crew, CrewOutput, Task
-from helpers import CrewAIEventListener
+from crewai import LLM, Agent, Crew, Task
+from crewai_event_listener import CrewAIEventListener
 from openai.types.chat import CompletionCreateParams
-from ragas.messages import AIMessage
+from ragas import MultiTurnSample
+from ragas.messages import AIMessage, HumanMessage, ToolMessage
 
 
 class MyAgent:
@@ -57,7 +59,11 @@ class MyAgent:
             None
         """
         self.api_key = api_key or os.environ.get("DATAROBOT_API_TOKEN")
-        self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
+        self.api_base = (
+            api_base
+            or os.environ.get("DATAROBOT_ENDPOINT")
+            or "https://api.datarobot.com"
+        )
         self.model = model
         self.timeout = timeout
         if isinstance(verbose, str):
@@ -66,9 +72,12 @@ class MyAgent:
             self.verbose = verbose
         self.event_listener = CrewAIEventListener()
 
-    def run(
+    def invoke(
         self, completion_create_params: CompletionCreateParams
-    ) -> tuple[CrewOutput, list[Any]]:
+    ) -> Union[
+        Generator[tuple[str, Any | None, dict[str, int]], None, None],
+        tuple[str, Any | None, dict[str, int]],
+    ]:
         """Run the agent with the provided completion parameters.
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
@@ -76,7 +85,11 @@ class MyAgent:
         Args:
             completion_create_params: The completion request parameters including input topic and settings.
         Returns:
-            tuple[CrewOutput, list[Any]]: The crew output and list of events for agentic metrics.
+            Union[
+                Generator[tuple[str, Any | None, dict[str, int]], None, None],
+                tuple[str, Any | None, dict[str, int]],
+            ]: For streaming requests, returns a generator yielding tuples of (response_text, pipeline_interactions, usage_metrics).
+               For non-streaming requests, returns a single tuple of (response_text, pipeline_interactions, usage_metrics).
         """
         # Retrieve the starting user prompt from the CompletionCreateParams
         user_messages = [
@@ -91,12 +104,17 @@ class MyAgent:
         # Print commands may need flush=True to ensure they are displayed in real-time.
         print("Running agent with user prompt:", user_prompt_content, flush=True)
 
-        # Run the crew with the inputs
-        crew_output = self.run_crew_agentic_workflow().kickoff(
+        # Create and invoke the CrewAI Agentic Workflow with the inputs
+        crewai_agentic_workflow = Crew(
+            agents=[self.agent_planner, self.agent_writer, self.agent_editor],
+            tasks=[self.task_plan, self.task_write, self.task_edit],
+            verbose=self.verbose,
+        )
+        crew_output = crewai_agentic_workflow.kickoff(
             inputs={"topic": user_prompt_content}
         )
 
-        # Extract the response text from the crew output
+        # Extract the final agent response as the synchronous response
         response_text = str(crew_output.raw)
 
         # Create a list of events from the event listener
@@ -108,17 +126,15 @@ class MyAgent:
         else:
             events = None
 
-        # The `events` variable is used to compute agentic metrics and guardrails
-        # If you are not interested in these metrics, you can also return None instead.
-        return crew_output, events
+        pipeline_interactions = self.create_pipeline_interactions_from_events(events)
 
-    def run_crew_agentic_workflow(self) -> Crew:
-        """Creates and returns a Crew instance with defined agents and tasks."""
-        return Crew(
-            agents=[self.agent_planner, self.agent_writer, self.agent_editor],
-            tasks=[self.task_plan, self.task_write, self.task_edit],
-            verbose=self.verbose,
-        )
+        usage_metrics = {
+            "completion_tokens": crew_output.token_usage.completion_tokens,
+            "prompt_tokens": crew_output.token_usage.prompt_tokens,
+            "total_tokens": crew_output.token_usage.total_tokens,
+        }
+
+        return response_text, pipeline_interactions, usage_metrics
 
     @property
     def llm(self) -> LLM:
@@ -127,10 +143,42 @@ class MyAgent:
         For help configuring different LLM backends see:
         https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/developing-agents-llm-providers.md
         """
+        api_base = urlparse(self.api_base)
         if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
-            return self.llm_with_datarobot_deployment
+            path = api_base.path
+            if "/api/v2/deployments" not in path and "api/v2/genai" not in path:
+                # Ensure the API base ends with /api/v2/ for deployments
+                if not path.endswith("/api/v2/") and not path.endswith("/api/v2"):
+                    path = urljoin(path + "/", "api/v2/")
+                if not path.endswith("/"):
+                    path += "/"
+                api_base = api_base._replace(path=path)
+                deployment_url = urljoin(
+                    api_base.geturl(),
+                    f"deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/",
+                )
+            else:
+                # If user specifies a likely deployment URL then leave it alone
+                deployment_url = api_base.geturl()
+            return LLM(
+                model="openai/gpt-4o-mini",
+                api_base=deployment_url,
+                api_key=self.api_key,
+                timeout=self.timeout,
+            )
         else:
-            return self.llm_with_datarobot_llm_gateway
+            # Ensure the API base does not end with /api/v2/ for LLM Gateway
+            # Remove only '/api/v2' or '/api/v2/' from the path portion, if present
+            path = api_base.path
+            if path.endswith("api/v2/") or path.endswith("api/v2"):
+                path = re.sub(r"/api/v2/?$", "/", path)
+            api_base = api_base._replace(path=path)
+            return LLM(
+                model="datarobot/azure/gpt-4o-mini",
+                api_base=api_base.geturl(),
+                api_key=self.api_key,
+                timeout=self.timeout,
+            )
 
     @property
     def agent_planner(self) -> Agent:
@@ -216,48 +264,15 @@ class MyAgent:
             agent=self.agent_editor,
         )
 
-    @property
-    def api_base_litellm(self) -> str:
-        """Returns a modified version of the API base URL suitable for LiteLLM.
+    @staticmethod
+    def create_pipeline_interactions_from_events(
+        events: list[Union[HumanMessage, AIMessage, ToolMessage]],
+    ) -> MultiTurnSample | None:
+        """Convert a list of events into a MultiTurnSample.
 
-        Strips 'api/v2/' or 'api/v2' from the end of the URL if present.
-
-        Returns:
-            str: The modified API base URL.
+        Creates the pipeline interactions for moderations and evaluation
+        (e.g. Task Adherence, Agent Goal Accuracy, Tool Call Accuracy)
         """
-        if self.api_base:
-            return re.sub(r"api/v2/?$", "", self.api_base)
-        return "https://api.datarobot.com"
-
-    @property
-    def llm_with_datarobot_llm_gateway(self) -> LLM:
-        """Returns a CrewAI LLM instance configured to use DataRobot's LLM Gateway.
-
-        This property can serve as a primary LLM backend for the agents. You can optionally
-        have multiple LLMs configured, such as one for DataRobot's LLM Gateway
-        and another for a specific DataRobot deployment, or even multiple deployments or
-        third-party LLMs.
-        """
-        return LLM(
-            model="datarobot/azure/gpt-4o-mini",
-            api_base=self.api_base_litellm,
-            api_key=self.api_key,
-            timeout=self.timeout,
-        )
-
-    @property
-    def llm_with_datarobot_deployment(self) -> LLM:
-        """Returns a CrewAI LLM instance configured to use DataRobot's LLM Deployments.
-
-        This property can serve as a primary LLM backend for the agents. You can optionally
-        have multiple LLMs configured, such as one for DataRobot's LLM Gateway
-        and another for a specific DataRobot deployment, or even multiple deployments or
-        third-party LLMs.
-        """
-        deployment_url = f"{self.api_base}/deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/"
-        return LLM(
-            model="openai/gpt-4o-mini",
-            api_base=deployment_url,
-            api_key=self.api_key,
-            timeout=self.timeout,
-        )
+        if not events:
+            return None
+        return MultiTurnSample(user_input=events)

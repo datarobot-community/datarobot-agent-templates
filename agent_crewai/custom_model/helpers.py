@@ -12,153 +12,251 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import logging
+import os
 import time
 import uuid
-from typing import Any, Union
+from typing import Any, Generator, Iterator, Optional, Union, cast
 
-from crewai import CrewOutput
-
-try:
-    from crewai.events.base_event_listener import BaseEventListener
-    from crewai.events.event_bus import CrewAIEventsBus
-    from crewai.events.event_types import (
-        AgentExecutionCompletedEvent,
-        AgentExecutionStartedEvent,
-        CrewKickoffStartedEvent,
-        ToolUsageFinishedEvent,
-        ToolUsageStartedEvent,
-    )
-# Handle legacy crewai package structure
-except ImportError:
-    from crewai.utilities.events import (
-        AgentExecutionCompletedEvent,
-        AgentExecutionStartedEvent,
-        CrewAIEventsBus,
-        CrewKickoffStartedEvent,
-        ToolUsageFinishedEvent,
-        ToolUsageStartedEvent,
-    )
-    from crewai.utilities.events.base_event_listener import BaseEventListener
-
-from openai.types import CompletionUsage
-from openai.types.chat import (
-    ChatCompletion,
-    ChatCompletionMessage,
+import datarobot as dr
+import openai
+import pandas as pd
+from datarobot.models.genai.agent.auth import (
+    get_authorization_context,
+    set_authorization_context,
 )
-from openai.types.chat.chat_completion import Choice
-from ragas import MultiTurnSample
-from ragas.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
-
-
-class CrewAIEventListener(BaseEventListener):  # type: ignore[misc]
-    def __init__(self) -> None:
-        super().__init__()
-        self.messages: list[Union[HumanMessage, AIMessage, ToolMessage]] = []
-
-    def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
-        @crewai_event_bus.on(CrewKickoffStartedEvent)  # type: ignore[misc]
-        def on_crew_execution_started(_: Any, event: CrewKickoffStartedEvent) -> None:
-            self.messages.append(
-                HumanMessage(content=f"Working on input '{json.dumps(event.inputs)}'")
-            )
-
-        @crewai_event_bus.on(AgentExecutionStartedEvent)  # type: ignore[misc]
-        def on_agent_execution_started(
-            _: Any, event: AgentExecutionStartedEvent
-        ) -> None:
-            self.messages.append(AIMessage(content=event.task_prompt, tool_calls=[]))
-
-        @crewai_event_bus.on(AgentExecutionCompletedEvent)  # type: ignore[misc]
-        def on_agent_execution_completed(
-            _: Any, event: AgentExecutionCompletedEvent
-        ) -> None:
-            self.messages.append(AIMessage(content=event.output, tool_calls=[]))
-
-        @crewai_event_bus.on(ToolUsageStartedEvent)  # type: ignore[misc]
-        def on_tool_usage_started(_: Any, event: ToolUsageStartedEvent) -> None:
-            # Its a tool call - add tool call to last AIMessage
-            if len(self.messages) == 0:
-                logging.warning("Direct tool usage without agent invocation")
-                return
-            last_message = self.messages[-1]
-            if not isinstance(last_message, AIMessage):
-                logging.warning(
-                    "Tool call must be preceded by an AIMessage somewhere in the conversation."
-                )
-                return
-            tool_call = ToolCall(name=event.tool_name, args=json.loads(event.tool_args))
-            last_message.tool_calls.append(tool_call)
-
-        @crewai_event_bus.on(ToolUsageFinishedEvent)  # type: ignore[misc]
-        def on_tool_usage_finished(_: Any, event: ToolUsageFinishedEvent) -> None:
-            if len(self.messages) == 0:
-                logging.warning("Direct tool usage without agent invocation")
-                return
-            last_message = self.messages[-1]
-            if not isinstance(last_message, AIMessage):
-                logging.warning(
-                    "Tool call must be preceded by an AIMessage somewhere in the conversation."
-                )
-                return
-            if not last_message.tool_calls:
-                logging.warning("No previous tool calls found")
-                return
-            self.messages.append(ToolMessage(content=event.output))
+from datarobot_predict.deployment import (
+    PredictionResult,
+    UnstructuredPredictionResult,
+    predict,
+    predict_unstructured,
+)
+from openai.types import CompletionCreateParams, CompletionUsage
+from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessage
+from openai.types.chat.completion_create_params import (
+    CompletionCreateParamsNonStreaming,
+    CompletionCreateParamsStreaming,
+)
 
 
 class CustomModelChatResponse(ChatCompletion):
     pipeline_interactions: str | None = None
 
 
-def create_completion_from_response_text(
-    response_text: str,
-    usage_metrics: dict[str, int],
-    model: str,
-    pipeline_interactions: MultiTurnSample | None = None,
-) -> CustomModelChatResponse:
-    """Convert the text of the LLM response into a chat completion response."""
-    completion_id = str(uuid.uuid4())
-    completion_timestamp = int(time.time())
+class CustomModelStreamingResponse(ChatCompletionChunk):
+    pipeline_interactions: str | None = None
 
+
+def to_custom_model_chat_response(
+    response_text: str,
+    pipeline_interactions: Optional[Any],
+    usage_metrics: dict[str, int],
+    model: Optional[str] = None,
+) -> CustomModelChatResponse:
+    """Convert the OpenAI ChatCompletion response to CustomModelChatResponse."""
+    from openai.types.chat.chat_completion import Choice
+
+    # Convert the text of the agent response into a chat completion response
     choice = Choice(
         index=0,
         message=ChatCompletionMessage(role="assistant", content=response_text),
         finish_reason="stop",
     )
-    completion = CustomModelChatResponse(
-        id=completion_id,
+
+    return CustomModelChatResponse(
+        id=str(uuid.uuid4()),  # Create a unique completion id
         object="chat.completion",
         choices=[choice],
-        created=completion_timestamp,
+        created=int(time.time()),  # ChatCompletion created time should be an integer
         model=model,
         usage=CompletionUsage(**usage_metrics),
         pipeline_interactions=pipeline_interactions.model_dump_json()
         if pipeline_interactions
         else None,
     )
-    return completion
 
 
-def to_custom_model_response(
-    crew_output: CrewOutput,
-    events: list[Union[HumanMessage, AIMessage, ToolMessage]] | None,
-    model: str,
-) -> CustomModelChatResponse:
-    """Convert the CrewAI agent output to a custom model response."""
-    usage_metrics: dict[str, int] = {
-        "completion_tokens": crew_output.token_usage.completion_tokens,
-        "prompt_tokens": crew_output.token_usage.prompt_tokens,
-        "total_tokens": crew_output.token_usage.total_tokens,
-    }
+def to_custom_model_streaming_response(
+    streaming_response_generator: Generator[
+        tuple[str, Any | None, dict[str, int]], None, None
+    ],
+    model: Optional[str] = None,
+) -> Iterator[CustomModelStreamingResponse]:
+    """Convert the OpenAI ChatCompletionChunk response to CustomModelStreamingResponse."""
+    from openai.types.chat.chat_completion_chunk import Choice, ChoiceDelta
 
-    pipeline_interactions = None
-    if events is not None:
-        pipeline_interactions = MultiTurnSample(user_input=events)
-    response = create_completion_from_response_text(
-        response_text=str(crew_output.raw),
-        usage_metrics=usage_metrics,
-        model=model,
-        pipeline_interactions=pipeline_interactions,
+    completion_id = str(uuid.uuid4())
+    created = int(time.time())
+
+    last_pipeline_interactions = None
+    last_usage_metrics = None
+
+    for (
+        response_text,
+        pipeline_interactions,
+        usage_metrics,
+    ) in streaming_response_generator:
+        last_pipeline_interactions = pipeline_interactions
+        last_usage_metrics = usage_metrics
+
+        if response_text:
+            choice = Choice(
+                index=0,
+                delta=ChoiceDelta(role="assistant", content=response_text),
+                finish_reason=None,
+            )
+            yield CustomModelStreamingResponse(
+                id=completion_id,
+                object="chat.completion.chunk",
+                created=created,
+                model=model,
+                choices=[choice],
+                usage=CompletionUsage(**usage_metrics) if usage_metrics else None,
+            )
+
+    # Yield final chunk indicating end of stream
+    choice = Choice(
+        index=0,
+        delta=ChoiceDelta(role="assistant"),
+        finish_reason="stop",
     )
-    return response
+    yield CustomModelStreamingResponse(
+        id=completion_id,
+        object="chat.completion.chunk",
+        created=created,
+        model=model,
+        choices=[choice],
+        usage=CompletionUsage(**last_usage_metrics) if last_usage_metrics else None,
+        pipeline_interactions=last_pipeline_interactions.model_dump_json()
+        if last_pipeline_interactions
+        else None,
+    )
+
+
+def initialize_authorization_context(
+    completion_create_params: CompletionCreateParams
+    | CompletionCreateParamsNonStreaming
+    | CompletionCreateParamsStreaming,
+) -> None:
+    """Sets the authorization context for the agent.
+
+    Authorization context is required for propagating information needed by downstream
+    agents and tools to retrieve access tokens to connect to external services. When set,
+    authorization context will be automatically propagated when using ToolClient class.
+    """
+    # Note: authorization context internally uses contextvars, which are
+    # thread-safe and async-safe.
+    authorization_context = completion_create_params.get("authorization_context", {})
+    set_authorization_context(cast(dict[str, Any], authorization_context))
+
+
+class ToolClient:
+    """Client for interacting with Agent Tools Deployments.
+
+    This class provides methods to call the custom model tool using various hooks:
+    `score`, `score_unstructured`, and `chat`. When the `authorization_context` is set,
+    the client automatically propagates it to the agent tool. The `authorization_context`
+    is required for retrieving access tokens to connect to external services.
+    """
+
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
+        """Initialize the ToolClient.
+
+        Args:
+            api_key (Optional[str]): API key for authentication. Defaults to environment variable `DATAROBOT_API_TOKEN`.
+            base_url (Optional[str]): Base URL for the DataRobot API. Defaults to environment variable `DATAROBOT_ENDPOINT`.
+        """
+        self.api_key = api_key or os.getenv("DATAROBOT_API_TOKEN")
+        base_url = (
+            cast(
+                str,
+                (
+                    base_url
+                    or os.getenv("DATAROBOT_ENDPOINT", "https://app.datarobot.com")
+                ),
+            )
+            .rstrip("/")
+            .removesuffix("/api/v2")
+        )
+        self.base_url = base_url
+
+    @property
+    def datarobot_api_endpoint(self) -> str:
+        return self.base_url + "/api/v2"
+
+    def get_deployment(self, deployment_id: str) -> dr.Deployment:
+        """Retrieve a deployment by its ID.
+
+        Args:
+            deployment_id (str): The ID of the deployment.
+
+        Returns:
+            dr.Deployment: The deployment object.
+        """
+        dr.Client(self.api_key, self.datarobot_api_endpoint)
+        return dr.Deployment.get(deployment_id=deployment_id)
+
+    def call(
+        self, deployment_id: str, payload: dict[str, Any], **kwargs: Any
+    ) -> UnstructuredPredictionResult:
+        """Run the custom model tool using score_unstructured hook.
+
+        Args:
+            deployment_id (str): The ID of the deployment.
+            payload (dict[str, Any]): The input payload.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            UnstructuredPredictionResult: The response content and headers.
+        """
+        data = {
+            "payload": payload,
+            "authorization_context": get_authorization_context(),
+        }
+        return predict_unstructured(
+            deployment=self.get_deployment(deployment_id),
+            data=json.dumps(data),
+            content_type="application/json",
+            **kwargs,
+        )
+
+    def score(
+        self, deployment_id: str, data_frame: pd.DataFrame, **kwargs: Any
+    ) -> PredictionResult:
+        """Run the custom model tool using score hook.
+
+        Args:
+            deployment_id (str): The ID of the deployment.
+            data_frame (pd.DataFrame): The input data frame.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            PredictionResult: The response content and headers.
+        """
+        return predict(
+            deployment=self.get_deployment(deployment_id),
+            data_frame=data_frame,
+            **kwargs,
+        )
+
+    def chat(
+        self,
+        completion_create_params: CompletionCreateParams,
+        model: str,
+    ) -> Union[ChatCompletion, Iterator[ChatCompletionChunk]]:
+        """Run the custom model tool with the chat hook.
+
+        Args:
+            completion_create_params (CompletionCreateParams): Parameters for the chat completion.
+            model (str): The model to use.
+
+        Returns:
+            Union[ChatCompletion, Iterator[ChatCompletionChunk]]: The chat completion response.
+        """
+        extra_body = {
+            "authorization_context": get_authorization_context(),
+        }
+        return openai.chat.completions.create(
+            **completion_create_params,
+            model=model,
+            extra_body=extra_body,
+        )

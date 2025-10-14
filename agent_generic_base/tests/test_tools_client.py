@@ -15,7 +15,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from tools_client import ToolClient
+from helpers import ToolClient
 
 application_base_url = "https://example.com"
 

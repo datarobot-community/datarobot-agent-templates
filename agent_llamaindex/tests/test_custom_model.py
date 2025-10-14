@@ -31,7 +31,7 @@ class TestCustomModel:
 
         # Setup mocks
         mock_agent_instance = MagicMock()
-        mock_agent_instance.run.return_value = mock_agent_response
+        mock_agent_instance.invoke.return_value = mock_agent_response
         mock_agent.return_value = mock_agent_instance
 
         completion_create_params = {
@@ -80,7 +80,7 @@ class TestCustomModel:
 
         # Verify mocks were called correctly
         mock_agent.assert_called_once_with(**completion_create_params)
-        mock_agent_instance.run.assert_called_once_with(
+        mock_agent_instance.invoke.assert_called_once_with(
             completion_create_params={
                 "model": "test-model",
                 "messages": [{"role": "user", "content": '{"topic": "test"}'}],

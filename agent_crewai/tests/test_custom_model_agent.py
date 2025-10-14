@@ -127,7 +127,7 @@ class TestMyAgentCrewAI:
 
         # Assert - Additional kwargs should be accepted but not stored as attributes
         assert agent.api_key is None  # Should fallback to env var or None
-        assert agent.api_base is None  # Should fallback to env var or None
+        assert agent.api_base == "https://api.datarobot.com"  # Default value
         assert agent.model is None
         assert agent.verbose is True
 
@@ -138,8 +138,10 @@ class TestMyAgentCrewAI:
     @pytest.mark.parametrize(
         "api_base,expected_result",
         [
-            ("https://example.com/api/v2/", "https://example.com/"),
+            ("https://example.com", "https://example.com"),
+            ("https://example.com/", "https://example.com/"),
             ("https://example.com/api/v2", "https://example.com/"),
+            ("https://example.com/api/v2/", "https://example.com/"),
             ("https://example.com/other-path", "https://example.com/other-path"),
             (
                 "https://custom.example.com:8080/path/to/api/v2/",
@@ -164,17 +166,82 @@ class TestMyAgentCrewAI:
             (None, "https://api.datarobot.com"),
         ],
     )
-    def test_api_base_litellm_variations(self, api_base, expected_result):
+    @patch("agent.LLM")
+    def test_llm_gateway_with_api_base(self, mock_llm, api_base, expected_result):
         """Test api_base_litellm property with various URL formats."""
         with patch.dict(os.environ, {}, clear=True):
             agent = MyAgent(api_base=api_base)
-            result = agent.api_base_litellm
-            assert result == expected_result
+            _ = agent.llm
+            mock_llm.assert_called_once_with(
+                model="datarobot/azure/gpt-4o-mini",
+                api_base=expected_result,
+                api_key=None,
+                timeout=90,
+            )
+
+    @pytest.mark.parametrize(
+        "api_base,expected_result",
+        [
+            ("https://example.com", "https://example.com/api/v2/deployments/test-id/"),
+            ("https://example.com/", "https://example.com/api/v2/deployments/test-id/"),
+            (
+                "https://example.com/api/v2/",
+                "https://example.com/api/v2/deployments/test-id/",
+            ),
+            (
+                "https://example.com/api/v2",
+                "https://example.com/api/v2/deployments/test-id/",
+            ),
+            (
+                "https://example.com/other-path",
+                "https://example.com/other-path/api/v2/deployments/test-id/",
+            ),
+            (
+                "https://custom.example.com:8080/path/to",
+                "https://custom.example.com:8080/path/to/api/v2/deployments/test-id/",
+            ),
+            (
+                "https://custom.example.com:8080/path/to/api/v2/",
+                "https://custom.example.com:8080/path/to/api/v2/deployments/test-id/",
+            ),
+            (
+                "https://example.com/api/v2/deployments/",
+                "https://example.com/api/v2/deployments/",
+            ),
+            (
+                "https://example.com/api/v2/deployments",
+                "https://example.com/api/v2/deployments",
+            ),
+            (
+                "https://example.com/api/v2/genai/llmgw/chat/completions",
+                "https://example.com/api/v2/genai/llmgw/chat/completions",
+            ),
+            (
+                "https://example.com/api/v2/genai/llmgw/chat/completions/",
+                "https://example.com/api/v2/genai/llmgw/chat/completions/",
+            ),
+            (None, "https://api.datarobot.com/api/v2/deployments/test-id/"),
+        ],
+    )
+    @patch("agent.LLM")
+    def test_llm_deployment_with_api_base(self, mock_llm, api_base, expected_result):
+        """Test api_base_litellm property with various URL formats."""
+        with patch.dict(
+            os.environ, {"LLM_DATAROBOT_DEPLOYMENT_ID": "test-id"}, clear=True
+        ):
+            agent = MyAgent(api_base=api_base)
+            _ = agent.llm
+            mock_llm.assert_called_once_with(
+                model="openai/gpt-4o-mini",
+                api_base=expected_result,
+                api_key=None,
+                timeout=90,
+            )
 
     @patch("agent.LLM")
     def test_llm_property(self, mock_llm, agent):
         # Test that LLM is created with correct parameters
-        agent.llm_with_datarobot_llm_gateway
+        agent.llm
         mock_llm.assert_called_once_with(
             model="datarobot/azure/gpt-4o-mini",
             api_base="test_base",
@@ -187,7 +254,7 @@ class TestMyAgentCrewAI:
         # Test that LLM is created with correct parameters
         with patch.dict(os.environ, {}, clear=True):
             agent = MyAgent(api_key="test_key", verbose=True)
-            agent.llm_with_datarobot_llm_gateway
+            agent.llm
             mock_llm.assert_called_once_with(
                 model="datarobot/azure/gpt-4o-mini",
                 api_base="https://api.datarobot.com",
@@ -199,9 +266,7 @@ class TestMyAgentCrewAI:
     def test_agent_planner_property(self, mock_agent, agent):
         # Mock the llm property
         mock_llm = Mock()
-        with patch.object(
-            MyAgent, "llm_with_datarobot_llm_gateway", return_value=mock_llm
-        ):
+        with patch.object(MyAgent, "llm", return_value=mock_llm):
             agent.agent_planner
             mock_agent.assert_called_once_with(
                 role="Content Planner",
@@ -216,9 +281,7 @@ class TestMyAgentCrewAI:
     def test_agent_writer_property(self, mock_agent, agent):
         # Mock the llm property
         mock_llm = Mock()
-        with patch.object(
-            MyAgent, "llm_with_datarobot_llm_gateway", return_value=mock_llm
-        ):
+        with patch.object(MyAgent, "llm", return_value=mock_llm):
             agent.agent_writer
             mock_agent.assert_called_once_with(
                 role="Content Writer",
@@ -233,9 +296,7 @@ class TestMyAgentCrewAI:
     def test_agent_editor_property(self, mock_agent, agent):
         # Mock the llm property
         mock_llm = Mock()
-        with patch.object(
-            MyAgent, "llm_with_datarobot_llm_gateway", return_value=mock_llm
-        ):
+        with patch.object(MyAgent, "llm", return_value=mock_llm):
             agent.agent_editor
             mock_agent.assert_called_once_with(
                 role="Editor",
@@ -282,46 +343,14 @@ class TestMyAgentCrewAI:
                 agent=ANY,
             )
 
-    def test_run_method(self, agent):
-        # Create a mock result with a raw attribute
-        mock_result = Mock()
-        mock_result.raw = "success"
-        mock_result.token_usage = Mock(
-            completion_tokens=10,
-            prompt_tokens=5,
-            total_tokens=15,
-        )
-
-        # Create a mock crew with a kickoff method that returns the mock result
-        mock_crew = Mock()
-        mock_crew.kickoff.return_value = mock_result
-
-        # Patch the crew method to return our mock
-        with patch.object(MyAgent, "run_crew_agentic_workflow", return_value=mock_crew):
-            # Call the run method with test inputs
-            completion_create_params = {
-                "model": "test-model",
-                "messages": [{"role": "user", "content": "Artificial Intelligence"}],
-                "environment_var": True,
-            }
-            crew_output, events = agent.run(completion_create_params)
-
-            # Verify crew() was called
-            agent.run_crew_agentic_workflow.assert_called_once()
-
-            # Verify kickoff was called with the right inputs
-            mock_crew.kickoff.assert_called_once_with(
-                inputs={"topic": "Artificial Intelligence"}
-            )
-
-            assert crew_output == mock_result
-            assert not events
-
-    @patch("custom.MyAgent")
-    def test_chat(self, mock_agent):
-        # This test case covers pipeline interactions in the response.  Test with
-        # no pipeline interactions is already part of test_custom_model.py::test_chat
+    @patch("agent.Crew")
+    @patch("agent.CrewAIEventListener")
+    @patch("agent.Agent")
+    def test_chat(self, mock_agent, mock_event_listener, mock_crew, agent):
+        # This test case covers testing that the agent invoke runs with the llm interactions mocked
         from custom import chat
+
+        _ = mock_agent, agent  # Uncalled but left for global test setup
 
         crew_output = Mock(
             raw="agent result",
@@ -331,6 +360,8 @@ class TestMyAgentCrewAI:
                 total_tokens=3,
             ),
         )
+        mock_crew.return_value = Mock(kickoff=MagicMock(return_value=crew_output))
+
         events = [
             HumanMessage(content="Hi"),
             AIMessage(
@@ -342,19 +373,21 @@ class TestMyAgentCrewAI:
             ToolMessage(content="Use en"),
             AIMessage(content="How are you today?"),
         ]
+        mock_event_listener.return_value = Mock(messages=events)
 
         # Setup mocks
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.run.return_value = (crew_output, events)
-        mock_agent.return_value = mock_agent_instance
-
         completion_create_params = {
             "model": "test-model",
             "messages": [{"role": "user", "content": '{"topic": "test"}'}],
             "environment_var": True,
         }
 
-        response = chat(completion_create_params, model="test-model")
+        with (
+            patch.object(MyAgent, "task_plan"),
+            patch.object(MyAgent, "task_write"),
+            patch.object(MyAgent, "task_edit"),
+        ):
+            response = chat(completion_create_params, model="test-model")
 
         # Assert results - check the pipeline_interactions - other sections of the
         # results are already being checked in test_custom_model.py::test_chat

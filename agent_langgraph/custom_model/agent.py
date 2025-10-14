@@ -14,14 +14,17 @@
 import os
 import re
 from datetime import datetime
-from typing import Any, Optional, Union
+from typing import Any, Generator, Optional, Union
+from urllib.parse import urljoin, urlparse
 
 from langchain_community.chat_models import ChatLiteLLM
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import create_react_agent
 from langgraph.types import Command
 from openai.types.chat import CompletionCreateParams
+from ragas import MultiTurnSample
+from ragas.integrations.langgraph import convert_to_ragas_messages
 
 
 class MyAgent:
@@ -60,7 +63,11 @@ class MyAgent:
             None
         """
         self.api_key = api_key or os.environ.get("DATAROBOT_API_TOKEN")
-        self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
+        self.api_base = (
+            api_base
+            or os.environ.get("DATAROBOT_ENDPOINT")
+            or "https://api.datarobot.com"
+        )
         self.model = model
         self.timeout = timeout
         if isinstance(verbose, str):
@@ -68,9 +75,12 @@ class MyAgent:
         elif isinstance(verbose, bool):
             self.verbose = verbose
 
-    def run(
+    def invoke(
         self, completion_create_params: CompletionCreateParams
-    ) -> tuple[list[Any], dict[str, int]]:
+    ) -> Union[
+        Generator[tuple[str, Any | None, dict[str, int]], None, None],
+        tuple[str, Any | None, dict[str, int]],
+    ]:
         """Run the agent with the provided completion parameters.
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
@@ -78,7 +88,11 @@ class MyAgent:
         Args:
             completion_create_params: The completion request parameters including input topic and settings.
         Returns:
-            tuple[list[Any], dict[str, int]]: The langgraph output and usage_statistics for agentic metrics.
+            Union[
+                Generator[tuple[str, Any | None, dict[str, int]], None, None],
+                tuple[str, Any | None, dict[str, int]],
+            ]: For streaming requests, returns a generator yielding tuples of (response_text, pipeline_interactions, usage_metrics).
+               For non-streaming requests, returns a single tuple of (response_text, pipeline_interactions, usage_metrics).
         """
         # Retrieve the starting user prompt from the CompletionCreateParams
         user_messages = [
@@ -98,47 +112,138 @@ class MyAgent:
             update={
                 "messages": (
                     "user",
-                    f"The topic is '{user_prompt_content}'. Make sure you find any interesting and relevant"
+                    f"The topic is '{user_prompt_content}'. Make sure you find any interesting and relevant "
                     f"information given the current year is {str(datetime.now().year)}.",
                 ),
             },
             goto="writer_node",
         )
 
-        # Graph stream is a generator that will execute the graph
-        graph_stream = self.run_langgraph_agentic_workflow().stream(
-            input_message,
-            # Maximum number of steps to take in the graph
-            {"recursion_limit": 150},
+        # Create and invoke the Langgraph Agentic Workflow with the inputs
+        langgraph_workflow = StateGraph(MessagesState)
+        langgraph_workflow.add_node("planner_node", self.task_plan)
+        langgraph_workflow.add_node("writer_node", self.task_write)
+        langgraph_workflow.add_node("editor_node", self.task_edit)
+        langgraph_workflow.add_edge(START, "planner_node")
+        langgraph_execution_graph = langgraph_workflow.compile()
+
+        graph_stream = langgraph_execution_graph.stream(
+            input=input_message,
+            config={
+                "recursion_limit": 150
+            },  # Maximum number of steps to take in the graph
             debug=True,
         )
 
-        # Execute the graph and store calls to the agent in events
-        events = [event for event in graph_stream]
         usage_metrics: dict[str, int] = {
             "completion_tokens": 0,
             "prompt_tokens": 0,
             "total_tokens": 0,
         }
-        return events, usage_metrics
 
-    def run_langgraph_agentic_workflow(self) -> Any:
-        """Defines the workflow graph for the agent using Langgraph."""
-        workflow = StateGraph(MessagesState)
-        workflow.add_node("planner_node", self.task_plan)
-        workflow.add_node("writer_node", self.task_write)
-        workflow.add_node("editor_node", self.task_edit)
-        workflow.add_edge(START, "planner_node")
-        execution_graph = workflow.compile()
-        return execution_graph
+        # The following code demonstrate both a synchronous and streaming response.
+        # You can choose one or the other based on your use case, they function the same.
+        # The main difference is returning a generator for streaming or a final response for sync.
+        if completion_create_params.get("stream"):
+            # Streaming response: yield each message as it is generated
+            def stream_generator() -> Generator[
+                tuple[str, Any | None, dict[str, int]], None, None
+            ]:
+                # For each event in the graph stream, yield the latest message content
+                # along with updated usage metrics.
+                events = []
+                for event in graph_stream:
+                    events.append(event)
+                    current_node = next(iter(event))
+                    yield (
+                        str(event[current_node]["messages"][-1].content),
+                        None,
+                        usage_metrics,
+                    )
+                    current_usage = event[current_node].get("usage", {})
+                    if current_usage:
+                        usage_metrics["total_tokens"] += current_usage.get(
+                            "total_tokens", 0
+                        )
+                        usage_metrics["prompt_tokens"] += current_usage.get(
+                            "prompt_tokens", 0
+                        )
+                        usage_metrics["completion_tokens"] += current_usage.get(
+                            "completion_tokens", 0
+                        )
+
+                # Create a list of events from the event listener
+                pipeline_interactions = self.create_pipeline_interactions_from_events(
+                    events
+                )
+
+                # yield the final response indicating completion
+                yield "", pipeline_interactions, usage_metrics
+
+            return stream_generator()
+        else:
+            # Synchronous response: collect all events and return the final message
+            events = [event for event in graph_stream]
+            pipeline_interactions = self.create_pipeline_interactions_from_events(
+                events
+            )
+
+            # Extract the final event from the graph stream as the synchronous response
+            last_event = events[-1]
+            node_name = next(iter(last_event))
+            response_text = str(last_event[node_name]["messages"][-1].content)
+            current_usage = last_event[node_name].get("usage", {})
+            if current_usage:
+                usage_metrics["total_tokens"] += current_usage.get("total_tokens", 0)
+                usage_metrics["prompt_tokens"] += current_usage.get("prompt_tokens", 0)
+                usage_metrics["completion_tokens"] += current_usage.get(
+                    "completion_tokens", 0
+                )
+
+            return response_text, pipeline_interactions, usage_metrics
 
     @property
     def llm(self) -> ChatLiteLLM:
-        """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Gateway or a specific deployment."""
+        """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Gateway or a specific deployment.
+
+        For help configuring different LLM backends see:
+        https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/developing-agents-llm-providers.md
+        """
+        api_base = urlparse(self.api_base)
         if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
-            return self.llm_with_datarobot_deployment
+            path = api_base.path
+            if "/api/v2/deployments" not in path and "api/v2/genai" not in path:
+                # Ensure the API base ends with /api/v2/ for deployments
+                if not path.endswith("/api/v2/") and not path.endswith("/api/v2"):
+                    path = urljoin(path + "/", "api/v2/")
+                if not path.endswith("/"):
+                    path += "/"
+                api_base = api_base._replace(path=path)
+                deployment_url = urljoin(
+                    api_base.geturl(),
+                    f"deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/",
+                )
+            else:
+                # If user specifies a likely deployment URL then leave it alone
+                deployment_url = api_base.geturl()
+            return ChatLiteLLM(
+                model="datarobot/azure/gpt-4o-mini",
+                api_base=deployment_url,
+                api_key=self.api_key,
+                timeout=self.timeout,
+            )
         else:
-            return self.llm_with_datarobot_llm_gateway
+            # Ensure the API base does not end with /api/v2/ for LLM Gateway
+            path = api_base.path
+            if path.endswith("api/v2/") or path.endswith("api/v2"):
+                path = re.sub(r"/api/v2/?$", "/", path)
+            api_base = api_base._replace(path=path)
+            return ChatLiteLLM(
+                model="datarobot/azure/gpt-4o-mini",
+                api_base=api_base.geturl(),
+                api_key=self.api_key,
+                timeout=self.timeout,
+            )
 
     @property
     def agent_planner(self) -> Any:
@@ -254,48 +359,26 @@ class MyAgent:
             f"\n{suffix}"
         )
 
-    @property
-    def api_base_litellm(self) -> str:
-        """Returns a modified version of the API base URL suitable for LiteLLM.
+    @staticmethod
+    def create_pipeline_interactions_from_events(
+        events: list[dict[str, Any]],
+    ) -> MultiTurnSample | None:
+        """Convert a list of events into a MultiTurnSample.
 
-        Strips 'api/v2/' or 'api/v2' from the end of the URL if present.
-
-        Returns:
-            str: The modified API base URL.
+        Creates the pipeline interactions for moderations and evaluation
+        (e.g. Task Adherence, Agent Goal Accuracy, Tool Call Accuracy)
         """
-        if self.api_base:
-            return re.sub(r"api/v2/?$", "", self.api_base)
-        return "https://api.datarobot.com"
+        if not events:
+            return None
 
-    @property
-    def llm_with_datarobot_llm_gateway(self) -> ChatLiteLLM:
-        """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Gateway.
+        messages = []
+        for e in events:
+            for k, v in e.items():
+                messages.extend(v["messages"])
 
-        This property can serve as a primary LLM backend for the agents. You can optionally
-        have multiple LLMs configured, such as one for DataRobot's LLM Gateway
-        and another for a specific DataRobot deployment, or even multiple deployments or
-        third-party LLMs.
-        """
-        return ChatLiteLLM(
-            model="datarobot/azure/gpt-4o-mini",
-            api_base=self.api_base_litellm,
-            api_key=self.api_key,
-            timeout=self.timeout,
-        )
+        # Drop the ToolMessages since they may not be compatible with Ragas ToolMessage
+        # that is needed for the MultiTurnSample.
+        messages = [m for m in messages if not isinstance(m, ToolMessage)]
 
-    @property
-    def llm_with_datarobot_deployment(self) -> ChatLiteLLM:
-        """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Deployments.
-
-        This property can serve as a primary LLM backend for the agents. You can optionally
-        have multiple LLMs configured, such as one for DataRobot's LLM Gateway
-        and another for a specific DataRobot deployment, or even multiple deployments or
-        third-party LLMs.
-        """
-        deployment_url = f"{self.api_base}/deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/"
-        return ChatLiteLLM(
-            model="openai/gpt-4o-mini",
-            api_base=deployment_url,
-            api_key=self.api_key,
-            timeout=self.timeout,
-        )
+        ragas_trace = convert_to_ragas_messages(messages)
+        return MultiTurnSample(user_input=ragas_trace)

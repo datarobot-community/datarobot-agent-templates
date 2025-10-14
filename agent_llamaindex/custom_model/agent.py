@@ -16,7 +16,8 @@ import asyncio
 import os
 import re
 from datetime import datetime
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Generator, Optional, Sequence, Union
+from urllib.parse import urljoin, urlparse
 
 from llama_index.core.agent.workflow import (
     AgentInput,
@@ -31,6 +32,8 @@ from llama_index.core.base.llms.types import LLMMetadata
 from llama_index.core.workflow import Context, Event
 from llama_index.llms.litellm import LiteLLM
 from openai.types.chat import CompletionCreateParams
+from ragas import MultiTurnSample
+from ragas.integrations.llama_index import convert_to_ragas_messages
 
 
 class DataRobotLiteLLM(LiteLLM):  # type: ignore[misc]
@@ -91,7 +94,11 @@ class MyAgent:
             None
         """
         self.api_key = api_key or os.environ.get("DATAROBOT_API_TOKEN")
-        self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
+        self.api_base = (
+            api_base
+            or os.environ.get("DATAROBOT_ENDPOINT")
+            or "https://api.datarobot.com"
+        )
         self.model = model
         self.timeout = timeout
         if isinstance(verbose, str):
@@ -99,9 +106,12 @@ class MyAgent:
         elif isinstance(verbose, bool):
             self.verbose = verbose
 
-    def run(
+    def invoke(
         self, completion_create_params: CompletionCreateParams
-    ) -> Tuple[str, dict[str, int], Sequence[Event] | None]:
+    ) -> Union[
+        Generator[tuple[str, Any | None, dict[str, int]], None, None],
+        tuple[str, Any | None, dict[str, int]],
+    ]:
         """Run the agent with the provided completion parameters.
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
@@ -109,8 +119,11 @@ class MyAgent:
         Args:
             completion_create_params: The completion request parameters including input topic and settings.
         Returns:
-            tuple[str, dict[str, int], Sequence[Event] | None]: A tuple containing the agent
-                response, usage_statistics and a list of messages (events).
+            Union[
+                Generator[tuple[str, Any | None, dict[str, int]], None, None],
+                tuple[str, Any | None, dict[str, int]],
+            ]: For streaming requests, returns a generator yielding tuples of (response_text, pipeline_interactions, usage_metrics).
+               For non-streaming requests, returns a single tuple of (response_text, pipeline_interactions, usage_metrics).
         """
         # Retrieve the starting user prompt from the CompletionCreateParams
         user_messages = [
@@ -127,13 +140,19 @@ class MyAgent:
 
         input_message = (
             f"Your task is to write a detailed report on a topic. "
-            f"The topic is '{user_prompt_content}'. Make sure you find any interesting and relevant"
+            f"The topic is '{user_prompt_content}'. Make sure you find any interesting and relevant "
             f"information given the current year is {str(datetime.now().year)}."
         )
 
+        # Create and invoke the LlamaIndex Agentic Workflow with the inputs
         result, events = asyncio.run(
             self.run_llamaindex_agentic_workflow(input_message)
         )
+
+        # Extract the report_content as the synchronous response
+        response_text = str(result["report_content"])
+
+        pipeline_interactions = self.create_pipeline_interactions_from_events(events)
 
         usage_metrics: dict[str, int] = {
             "completion_tokens": 0,
@@ -141,9 +160,7 @@ class MyAgent:
             "total_tokens": 0,
         }
 
-        # The `events` variable is used to compute agentic metrics and guardrails
-        # If you are not interested in these metrics, you can also return None instead.
-        return str(result["report_content"]), usage_metrics, events
+        return response_text, pipeline_interactions, usage_metrics
 
     async def run_llamaindex_agentic_workflow(self, user_prompt: str) -> Any:
         agent_workflow = AgentWorkflow(
@@ -196,11 +213,51 @@ class MyAgent:
 
     @property
     def llm(self) -> DataRobotLiteLLM:
-        """Returns a LlamaIndex LiteLLM compatible LLM instance configured to use DataRobot's LLM Gateway or a specific deployment."""
+        """Returns a LlamaIndex LiteLLM instance configured to use DataRobot's LLM Gateway or a specific deployment.
+
+        For help configuring different LLM backends see:
+        https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/developing-agents-llm-providers.md
+        """
+
+        # NOTE: LlamaIndex tool encodings are sensitive to the LLM model used and may need to be re-written
+        # to work with different models. This example assumes the model is a GPT compatible model.
+
+        api_base = urlparse(self.api_base)
         if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
-            return self.llm_with_datarobot_deployment
+            path = api_base.path
+            if "/api/v2/deployments" not in path and "api/v2/genai" not in path:
+                # Ensure the API base ends with /api/v2/ for deployments
+                if not path.endswith("/api/v2/") and not path.endswith("/api/v2"):
+                    path = urljoin(path + "/", "api/v2/")
+                if not path.endswith("/"):
+                    path += "/"
+                api_base = api_base._replace(path=path)
+                deployment_url = urljoin(
+                    api_base.geturl(),
+                    f"deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/",
+                )
+            else:
+                # If user specifies a likely deployment URL then leave it alone
+                deployment_url = api_base.geturl()
+            return DataRobotLiteLLM(
+                model="openai/gpt-4o-mini",
+                api_base=deployment_url,
+                api_key=self.api_key,
+                timeout=self.timeout,
+            )
         else:
-            return self.llm_with_datarobot_llm_gateway
+            # Ensure the API base does not end with /api/v2/ for LLM Gateway
+            # Remove only '/api/v2' or '/api/v2/' from the path portion, if present
+            path = api_base.path
+            if path.endswith("api/v2/") or path.endswith("api/v2"):
+                path = re.sub(r"/api/v2/?$", "/", path)
+            api_base = api_base._replace(path=path)
+            return DataRobotLiteLLM(
+                model="datarobot/azure/gpt-4o-mini",
+                api_base=api_base.geturl(),
+                api_key=self.api_key,
+                timeout=self.timeout,
+            )
 
     @property
     def research_agent(self) -> FunctionAgent:
@@ -276,54 +333,16 @@ class MyAgent:
         await ctx.set("state", current_state)
         return "Report reviewed."
 
-    @property
-    def api_base_litellm(self) -> str:
-        """Returns a modified version of the API base URL suitable for LiteLLM.
+    @staticmethod
+    def create_pipeline_interactions_from_events(
+        events: Sequence[Event] | None,
+    ) -> MultiTurnSample | None:
+        """Convert a list of events into a MultiTurnSample.
 
-        Strips 'api/v2/' or 'api/v2' from the end of the URL if present.
-
-        Returns:
-            str: The modified API base URL.
+        Creates the pipeline interactions for moderations and evaluation
+        (e.g. Task Adherence, Agent Goal Accuracy, Tool Call Accuracy)
         """
-        if self.api_base:
-            return re.sub(r"api/v2/?$", "", self.api_base)
-        return "https://api.datarobot.com"
-
-    @property
-    def llm_with_datarobot_llm_gateway(self) -> DataRobotLiteLLM:
-        """Returns a LlamaIndex LiteLLM compatible LLM instance configured to use DataRobot's LLM Gateway.
-
-        This property can serve as a primary LLM backend for the agents. You can optionally
-        have multiple LLMs configured, such as one for DataRobot's LLM Gateway
-        and another for a specific DataRobot deployment, or even multiple deployments or
-        third-party LLMs.
-        """
-
-        # NOTE: LlamaIndex tool encodings are sensitive the the LLM model used and may need to be re-written
-        # to work with different models. This example assumes the model is a GPT compatible model.
-        return DataRobotLiteLLM(
-            model="datarobot/azure/gpt-4o-mini",
-            api_base=self.api_base_litellm,
-            api_key=self.api_key,
-            timeout=self.timeout,
-        )
-
-    @property
-    def llm_with_datarobot_deployment(self) -> DataRobotLiteLLM:
-        """Returns a LlamaIndex LiteLLM compatible LLM instance configured to use DataRobot's LLM Deployments.
-
-        This property can serve as a primary LLM backend for the agents. You can optionally
-        have multiple LLMs configured, such as one for DataRobot's LLM Gateway
-        and another for a specific DataRobot deployment, or even multiple deployments or
-        third-party LLMs.
-        """
-        deployment_url = f"{self.api_base}/deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/"
-
-        # NOTE: LlamaIndex tool encodings are sensitive the the LLM model used and may need to be re-written
-        # to work with different models. This example assumes the model is a GPT compatible model.
-        return DataRobotLiteLLM(
-            model="openai/gpt-4o-mini",
-            api_base=deployment_url,
-            api_key=self.api_key,
-            timeout=self.timeout,
-        )
+        if not events:
+            return None
+        ragas_trace = convert_to_ragas_messages(events)
+        return MultiTurnSample(user_input=ragas_trace)

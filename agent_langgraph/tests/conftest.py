@@ -13,7 +13,6 @@
 # limitations under the License.
 import os
 import sys
-from unittest import mock
 
 import pytest
 
@@ -36,71 +35,16 @@ def custom_model_environment(root_path):
 
 
 @pytest.fixture
-def mock_agent_response(
-    mock_crewai_output,
-    mock_langgraph_output,
-    mock_llamaindex_output,
-    mock_generic_output,
-):
+def mock_agent_response():
     """
     Fixture to return a mock agent response based on the agent template framework.
     """
-    # Return the agent framework
-    return mock_langgraph_output
-
-
-@pytest.fixture
-def mock_crewai_output():
-    return mock.Mock(
-        raw="agent result",
-        token_usage=mock.Mock(
-            completion_tokens=1,
-            prompt_tokens=2,
-            total_tokens=3,
-        ),
-    ), None
-
-
-@pytest.fixture
-def mock_langgraph_output():
-    from langchain_core.messages import AIMessage
-
-    usage = {
-        "completion_tokens": 1,
-        "prompt_tokens": 2,
-        "total_tokens": 3,
-    }
     return (
-        [
-            {
-                "final_agent": {
-                    "messages": [
-                        AIMessage(content="Intermediate message"),
-                        AIMessage(content="agent result"),
-                    ]
-                }
-            },
-        ],
-        usage,
+        "agent result",
+        [],
+        {
+            "completion_tokens": 1,
+            "prompt_tokens": 2,
+            "total_tokens": 3,
+        },
     )
-
-
-@pytest.fixture
-def mock_generic_output():
-    usage = {
-        "completion_tokens": 1,
-        "prompt_tokens": 2,
-        "total_tokens": 3,
-    }
-
-    return "agent result", usage
-
-
-@pytest.fixture
-def mock_llamaindex_output():
-    usage = {
-        "completion_tokens": 1,
-        "prompt_tokens": 2,
-        "total_tokens": 3,
-    }
-    return "agent result", usage, None
