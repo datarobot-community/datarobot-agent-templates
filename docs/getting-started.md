@@ -86,7 +86,7 @@ Create an `.env` file in the root directory before running any commands:
   cp .env.sample .env
   ```
 
-1. Edit the file with your preferred text editor.
+2. Edit the file with your preferred text editor.
 
   ```bash
   nano .env  # or vim .env, code .env, etc.
