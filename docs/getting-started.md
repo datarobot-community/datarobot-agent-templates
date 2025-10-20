@@ -169,7 +169,7 @@ task agent:cli -- execute-deployment --user_prompt 'Tell me about Generative AI'
 - DataRobot UI → "Console" → "Deployments" → select your deployment → ID shown in URL and "Details" section
 - See [DataRobot Deployment documentation](https://docs.datarobot.com/en/docs/mlops/deployment/index.html) for more information
 
-### Step 7: Develop your agent
+## Develop your agent
 
 You're ready to develop your agent! See the [Developing Agents](/docs/developing-agents.md) documentation for next steps:
 - [Developing your agent](/docs/developing-agents.md)
