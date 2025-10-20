@@ -26,16 +26,15 @@
   </a>
 </p>
 
-This repository provides ready-to-use templates for building and deploying AI agents with multi-agent frameworks. 
-These templates streamline the process of setting up your own agents with minimal configuration requirements. These 
-templates support local development and testing, as well as deployment to production environments within DataRobot.
+This repository provides ready-to-use templates for building and deploying agentic workflows with multi-agent frameworks.
+Agentic templates streamline the process of setting up new workflows with minimal configuration requirements.
+They support local development and testing, as well as deployment to production environments within DataRobot.
 
-If you are new to developing agentic workflows in DataRobot, we recommend starting with the
-[Getting Started](/docs/getting-started.md) guide which will help you create a simple document creation agentic workflow example.
+The full table of contents is available below, but you can also go directly to the [Quick Start](#quick-start) section to get started.
 
 ---
-### DataRobot Agent Templates Navigation
-- [Prerequisites](/docs/getting-started-prerequisites.md)
+# DataRobot Agent Templates Navigation
+- [Installing prerequisites](/docs/getting-started-prerequisites.md)
 - [Getting started](/docs/getting-started.md)
 - [Updating Agentic Templates](/docs/getting-started-updating.md)
 - Developing Agents
@@ -46,34 +45,30 @@ If you are new to developing agentic workflows in DataRobot, we recommend starti
   - [Adding tools to your agent](/docs/developing-agents-tools.md)
 ---
 
-## Available templates
+# Available templates
 
-This repository includes templates for three popular agent frameworks and a generic base template that can 
-be adapted to any framework of your choice. Each template includes a simple example agentic workflow with 3 agents and 
-3 tasks.
+This repository includes templates for three popular agent frameworks and a generic base template that can be adapted to any framework of your choice.
+Each template includes a simple example agentic workflow with 3 agents and 3 tasks.
 
-| Framework        | Description                                              | GitHub Repo | Docs  |
-|------------------|----------------------------------------------------------|-------------|-------|
-| **CrewAI**       | A multi-agent framework with focus on role-based agents. | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
-| **Generic Base** | A flexible template for any custom framework.            | -           | -     |
-| **LangGraph**    | Multi-agent orchestration with state graphs.             | [GitHub](https://github.com/langchain-ai/langgraph) | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
-| **Llama-Index**  | A framework for building RAG systems.                    | [GitHub](https://github.com/run-llama/llama_index)  | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
+| Framework        | Description                                                | GitHub Repo | Docs  |
+|------------------|------------------------------------------------------------|-------------|-------|
+| **CrewAI**       | A multi-agent framework with focus on role-based agents.   | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
+| **Generic Base** | A barebones template that can be adapted to any framework. | -           | -     |
+| **LangGraph**    | Multi-agent orchestration with state graphs.               | [GitHub](https://github.com/langchain-ai/langgraph) | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
+| **Llama-Index**  | A framework for building RAG systems.                      | [GitHub](https://github.com/run-llama/llama_index)  | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
 
-## Cloning the repository
-#### For cloud users:
-_Clone the repository to your local machine using Git or you can 
-[download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip)._
-```bash
-git clone https://github.com/datarobot-community/datarobot-agent-templates.git
-```
+# Quick Start
 
-#### For on-premise users:
-_Clone the release branch for your installation using Git:_
-```bash
-git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent-templates.git
-```
+This documentation demonstrates how to set up and deploy an agentic workflow using one of the available templates.
+The process consists of the following steps:
 
-## Get help
+1. [Installing prerequisites](/docs/getting-started-prerequisites.md)
+2. [Get started](/docs/getting-started.md)
+3. [Developing your agent](/docs/developing-agents.md)
+
+From here, proceed to [Installing prerequisites](/docs/getting-started-prerequisites.md).
+
+# Get help
 
 If you encounter issues or have questions, use one of the following options:
 - Check that your template is up to date by following the [Updating Agentic Templates](/docs/getting-started-updating.md) guide.
