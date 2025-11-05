@@ -11,19 +11,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import re
-from typing import Any, Generator, Optional, Union
-from urllib.parse import urljoin, urlparse
+from typing import Any, List, Optional, Union
 
+from config import Config
 from crewai import LLM, Agent, Crew, Task
 from crewai_event_listener import CrewAIEventListener
+from datarobot_genai.core.agents import (
+    BaseAgent,
+    InvokeReturn,
+    UsageMetrics,
+    extract_user_prompt_content,
+)
+from datarobot_genai.crewai.agent import (
+    build_llm,
+    create_pipeline_interactions_from_messages,
+)
+from mcp_client import mcp_tools_context
 from openai.types.chat import CompletionCreateParams
-from ragas import MultiTurnSample
 from ragas.messages import AIMessage, HumanMessage, ToolMessage
 
 
-class MyAgent:
+class MyAgent(BaseAgent):
     """MyAgent is a custom agent that uses CrewAI to plan, write, and edit content.
     It utilizes DataRobot's LLM Gateway or a specific deployment for language model interactions.
     This example illustrates 3 agents that handle content creation tasks, including planning, writing,
@@ -58,26 +66,26 @@ class MyAgent:
         Returns:
             None
         """
-        self.api_key = api_key or os.environ.get("DATAROBOT_API_TOKEN")
-        self.api_base = (
-            api_base
-            or os.environ.get("DATAROBOT_ENDPOINT")
-            or "https://api.datarobot.com"
+        super().__init__(
+            api_key=api_key,
+            api_base=api_base,
+            model=model,
+            verbose=verbose,
+            timeout=timeout,
+            **kwargs,
         )
-        self.model = model
-        self.timeout = timeout
-        if isinstance(verbose, str):
-            self.verbose = verbose.lower() == "true"
-        elif isinstance(verbose, bool):
-            self.verbose = verbose
+        self.config = Config()
+        self.default_model = self.config.llm_default_model
         self.event_listener = CrewAIEventListener()
+        self._mcp_tools: List[Any] = []  # Default to empty tools list
 
-    def invoke(
+    def set_mcp_tools(self, tools: List[Any]) -> None:
+        """Set MCP tools for all agents."""
+        self._mcp_tools = tools
+
+    async def invoke(
         self, completion_create_params: CompletionCreateParams
-    ) -> Union[
-        Generator[tuple[str, Any | None, dict[str, int]], None, None],
-        tuple[str, Any | None, dict[str, int]],
-    ]:
+    ) -> InvokeReturn:
         """Run the agent with the provided completion parameters.
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
@@ -92,96 +100,88 @@ class MyAgent:
                For non-streaming requests, returns a single tuple of (response_text, pipeline_interactions, usage_metrics).
         """
         # Retrieve the starting user prompt from the CompletionCreateParams
-        user_messages = [
-            msg
-            for msg in completion_create_params["messages"]
-            # You can use other roles as needed (e.g. "system", "assistant")
-            if msg.get("role") == "user"
-        ]
-        user_prompt: Any = user_messages[0] if user_messages else {}
-        user_prompt_content = user_prompt.get("content", {})
+        user_prompt_content = extract_user_prompt_content(completion_create_params)
 
         # Print commands may need flush=True to ensure they are displayed in real-time.
         print("Running agent with user prompt:", user_prompt_content, flush=True)
 
-        # Create and invoke the CrewAI Agentic Workflow with the inputs
-        crewai_agentic_workflow = Crew(
-            agents=[self.agent_planner, self.agent_writer, self.agent_editor],
-            tasks=[self.task_plan, self.task_write, self.task_edit],
-            verbose=self.verbose,
-        )
-        crew_output = crewai_agentic_workflow.kickoff(
-            inputs={"topic": user_prompt_content}
-        )
+        # Use MCP context manager to handle connection lifecycle
+        with mcp_tools_context(
+            api_base=self.api_base, api_key=self.api_key
+        ) as mcp_tools:
+            # Set MCP tools for all agents if mcp is not configured this is effectivelya no-op
+            self.set_mcp_tools(mcp_tools)
 
-        # Extract the final agent response as the synchronous response
-        response_text = str(crew_output.raw)
+            # Create and invoke the CrewAI Agentic Workflow with the inputs
+            crewai_agentic_workflow = Crew(
+                agents=[self.agent_planner, self.agent_writer, self.agent_editor],
+                tasks=[self.task_plan, self.task_write, self.task_edit],
+                verbose=self.verbose,
+            )
+            crew_output = crewai_agentic_workflow.kickoff(
+                inputs={"topic": user_prompt_content}
+            )
 
-        # Create a list of events from the event listener
-        events = self.event_listener.messages
-        if len(events) > 0:
-            last_message = events[-1].content
-            if last_message != response_text:
-                events.append(AIMessage(content=response_text))
-        else:
-            events = None
+            # Extract the final agent response as the synchronous response
+            response_text = str(crew_output.raw)
 
-        pipeline_interactions = self.create_pipeline_interactions_from_events(events)
-
-        usage_metrics = {
-            "completion_tokens": crew_output.token_usage.completion_tokens,
-            "prompt_tokens": crew_output.token_usage.prompt_tokens,
-            "total_tokens": crew_output.token_usage.total_tokens,
-        }
-
-        return response_text, pipeline_interactions, usage_metrics
-
-    @property
-    def llm(self) -> LLM:
-        """Returns a CrewAI LLM instance configured to use DataRobot's LLM Gateway or a specific deployment.
-
-        For help configuring different LLM backends see:
-        https://github.com/datarobot-community/datarobot-agent-templates/blob/main/docs/developing-agents-llm-providers.md
-        """
-        api_base = urlparse(self.api_base)
-        if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
-            path = api_base.path
-            if "/api/v2/deployments" not in path and "api/v2/genai" not in path:
-                # Ensure the API base ends with /api/v2/ for deployments
-                if not path.endswith("/api/v2/") and not path.endswith("/api/v2"):
-                    path = urljoin(path + "/", "api/v2/")
-                if not path.endswith("/"):
-                    path += "/"
-                api_base = api_base._replace(path=path)
-                deployment_url = urljoin(
-                    api_base.geturl(),
-                    f"deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/",
-                )
+            # Create a list of events from the event listener
+            events: Optional[List[Union[HumanMessage, AIMessage, ToolMessage]]] = (
+                self.event_listener.messages
+            )
+            if events and len(events) > 0:
+                last_message = events[-1].content
+                if last_message != response_text:
+                    events.append(AIMessage(content=response_text))
             else:
-                # If user specifies a likely deployment URL then leave it alone
-                deployment_url = api_base.geturl()
-            return LLM(
-                model="openai/gpt-4o-mini",
-                api_base=deployment_url,
-                api_key=self.api_key,
-                timeout=self.timeout,
-            )
-        else:
-            # Ensure the API base does not end with /api/v2/ for LLM Gateway
-            # Remove only '/api/v2' or '/api/v2/' from the path portion, if present
-            path = api_base.path
-            if path.endswith("api/v2/") or path.endswith("api/v2"):
-                path = re.sub(r"/api/v2/?$", "/", path)
-            api_base = api_base._replace(path=path)
-            return LLM(
-                model="datarobot/azure/gpt-4o-mini",
-                api_base=api_base.geturl(),
-                api_key=self.api_key,
-                timeout=self.timeout,
-            )
+                events = None
+
+            pipeline_interactions = create_pipeline_interactions_from_messages(events)
+
+            usage_metrics: UsageMetrics = {
+                "completion_tokens": crew_output.token_usage.completion_tokens,
+                "prompt_tokens": crew_output.token_usage.prompt_tokens,
+                "total_tokens": crew_output.token_usage.total_tokens,
+            }
+
+            return response_text, pipeline_interactions, usage_metrics
+
+    def llm(
+        self,
+        preferred_model: str | None = None,
+        auto_model_override: bool = True,
+    ) -> LLM:
+        """Returns the LLM to use for a given model.
+
+        If a `preferred_model` is provided, it will be used. Otherwise, the default model will be used.
+        If auto_model_override is True, it will try and use the model specified in the request
+        but automatically back out to the default model if the LLM Gateway is not configured
+
+        Args:
+            preferred_model: Optional[str]: The model to use. If none, it defaults to config.llm_default_model.
+            auto_model_override: Optional[bool]: If True, it will try and use the model
+                specified in the request but automatically back out if the LLM Gateway is
+                not available.
+
+        Returns:
+            LLM: The model to use.
+        """
+        model = preferred_model or self.default_model
+        if auto_model_override and not self.config.use_datarobot_llm_gateway:
+            model = self.default_model
+        if self.verbose:
+            print(f"Using model: {model}")
+        return build_llm(
+            api_base=self.api_base,
+            api_key=self.api_key,
+            model=model,
+            deployment_id=self.config.llm_deployment_id,
+            timeout=self.timeout,
+        )
 
     @property
     def agent_planner(self) -> Agent:
+        """Content Planner agent."""
         return Agent(
             role="Content Planner",
             goal="Plan engaging and factually accurate content on {topic}",
@@ -190,11 +190,13 @@ class MyAgent:
             "the basis for the Content Writer to write an article on this topic.",
             allow_delegation=False,
             verbose=self.verbose,
-            llm=self.llm,
+            llm=self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
+            tools=self._mcp_tools,
         )
 
     @property
     def agent_writer(self) -> Agent:
+        """Content Writer agent."""
         return Agent(
             role="Content Writer",
             goal="Write insightful and factually accurate opinion piece about the topic: {topic}",
@@ -206,11 +208,13 @@ class MyAgent:
             "to objective statements.",
             allow_delegation=False,
             verbose=self.verbose,
-            llm=self.llm,
+            llm=self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
+            tools=self._mcp_tools,
         )
 
     @property
     def agent_editor(self) -> Agent:
+        """Editor agent."""
         return Agent(
             role="Editor",
             goal="Edit a given blog post to align with the writing style of the organization.",
@@ -220,7 +224,8 @@ class MyAgent:
             "possible.",
             allow_delegation=False,
             verbose=self.verbose,
-            llm=self.llm,
+            llm=self.llm(),
+            tools=self._mcp_tools,
         )
 
     @property
@@ -263,16 +268,3 @@ class MyAgent:
             "have 2 or 3 paragraphs.",
             agent=self.agent_editor,
         )
-
-    @staticmethod
-    def create_pipeline_interactions_from_events(
-        events: list[Union[HumanMessage, AIMessage, ToolMessage]],
-    ) -> MultiTurnSample | None:
-        """Convert a list of events into a MultiTurnSample.
-
-        Creates the pipeline interactions for moderations and evaluation
-        (e.g. Task Adherence, Agent Goal Accuracy, Tool Call Accuracy)
-        """
-        if not events:
-            return None
-        return MultiTurnSample(user_input=events)

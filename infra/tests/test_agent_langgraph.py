@@ -17,7 +17,6 @@ from pathlib import Path
 import pytest
 from unittest.mock import patch, MagicMock, PropertyMock
 
-
 # Ensure the test directory is in sys.path for proper imports
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -32,9 +31,16 @@ def pulumi_mocks(monkeypatch):
     monkeypatch.setattr("infra.use_case", mock_use_case)
     monkeypatch.setattr("infra.project_dir", mock_project_dir)
 
+    # Mock out the LLM and just expose the runtime parameters as it is the only public
+    # interface required for this module.
+    mock_llm_module = MagicMock()
+    mock_llm_module.custom_model_runtime_parameters = []
+    monkeypatch.setitem(sys.modules, "infra.llm", mock_llm_module)
     # Mock pulumi_datarobot resources
     monkeypatch.setattr("pulumi_datarobot.ExecutionEnvironment", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.CustomModel", MagicMock())
+    monkeypatch.setattr("pulumi_datarobot.ApiTokenCredential", MagicMock())
+    monkeypatch.setattr("pulumi_datarobot.ApiTokenCredentialArgs", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.Playground", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.LlmBlueprint", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.PredictionEnvironment", MagicMock())
@@ -114,12 +120,11 @@ def test_execution_environment_not_set_and_docker_context(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.call_args
 
     assert (
-        kwargs["resource_name"]
-        == "Execution Environment [docker_context] [agent_langgraph]"
+        kwargs["resource_name"] == "[unittest] [agent_langgraph] Execution Environment"
     )
     assert kwargs["programming_language"] == "python"
-    assert kwargs["name"] == "[unittest] agent_langgraph"
-    assert kwargs["description"] == "Execution Environment for [unittest] agent_langgraph"  # fmt: skip
+    assert kwargs["name"] == "[unittest] [agent_langgraph] Execution Environment"
+    assert kwargs["description"] == "Execution Environment for [unittest] [agent_langgraph]"  # fmt: skip
     assert "docker_context_path" in kwargs
     assert "docker_image" not in kwargs
     assert kwargs["use_cases"] == ["customModel", "notebook"]
@@ -158,12 +163,11 @@ def test_execution_environment_not_set_with_docker_image(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.call_args
 
     assert (
-        kwargs["resource_name"]
-        == "Execution Environment [docker_context] [agent_langgraph]"
+        kwargs["resource_name"] == "[unittest] [agent_langgraph] Execution Environment"
     )
     assert kwargs["programming_language"] == "python"
-    assert kwargs["name"] == "[unittest] agent_langgraph"
-    assert kwargs["description"] == "Execution Environment for [unittest] agent_langgraph"  # fmt: skip
+    assert kwargs["name"] == "[unittest] [agent_langgraph] Execution Environment"
+    assert kwargs["description"] == "Execution Environment for [unittest] [agent_langgraph]"  # fmt: skip
     assert "docker_image" in kwargs
     assert "docker_context_path" not in kwargs
     assert kwargs["use_cases"] == ["customModel", "notebook"]
@@ -195,8 +199,7 @@ def test_execution_environment_default_set(monkeypatch):
 
     assert kwargs["id"] == "python-311-genai-agents-id"
     assert (
-        kwargs["resource_name"]
-        == "Execution Environment [PRE-EXISTING] [agent_langgraph]"
+        kwargs["resource_name"] == "[unittest] [agent_langgraph] Execution Environment"
     )
 
     # ExecutionEnvironment constructor should not be called when using default env
@@ -225,8 +228,7 @@ def test_execution_environment_custom_set(monkeypatch):
 
     assert kwargs["id"] == "Custom Execution Environment"
     assert (
-        kwargs["resource_name"]
-        == "Execution Environment [PRE-EXISTING] [agent_langgraph]"
+        kwargs["resource_name"] == "[unittest] [agent_langgraph] Execution Environment"
     )
 
     # ExecutionEnvironment constructor should not be called when using custom env
@@ -257,12 +259,17 @@ def test_custom_model_created(monkeypatch):
 
     # Reset the mock to clear calls from the initial import
     agent_infra.pulumi_datarobot.CustomModel.reset_mock()
-    importlib.reload(agent_infra)
+
+    environment_variables = {
+        "SESSION_SECRET_KEY": "secret_value",
+    }
+    with patch.dict(os.environ, environment_variables):
+        importlib.reload(agent_infra)
 
     agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
-    assert kwargs["resource_name"].startswith("Custom Model")
-    assert kwargs["name"] == "[unittest] agent_langgraph"
+    assert kwargs["resource_name"] == "[unittest] [agent_langgraph] Custom Model"
+    assert kwargs["name"] == "[unittest] [agent_langgraph] Custom Model"
     assert kwargs["base_environment_id"] == agent_infra.agent_langgraph_execution_environment.id  # fmt: skip
     assert (
         kwargs["base_environment_version_id"]
@@ -273,42 +280,13 @@ def test_custom_model_created(monkeypatch):
     assert kwargs["language"] == "python"
     assert kwargs["use_case_ids"] == [agent_infra.use_case.id]
     assert isinstance(kwargs["files"], list)
-    assert kwargs["runtime_parameter_values"] == []
 
+    runtime_parameter_values = kwargs["runtime_parameter_values"]
 
-def test_custom_model_created_llm_deployment_id(monkeypatch):
-    """Test that pulumi_datarobot.CustomModel is created with correct arguments when llm deployment id is set."""
-    monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
-    monkeypatch.setenv("LLM_DATAROBOT_DEPLOYMENT_ID", "model_id")
-
-    import importlib
-    import infra.agent_langgraph as agent_infra
-
-    # Reset the mock to clear calls from the initial import
-    agent_infra.pulumi_datarobot.CustomModel.reset_mock()
-    importlib.reload(agent_infra)
-
-    agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
-    args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
-    assert kwargs["resource_name"].startswith("Custom Model")
-    assert kwargs["name"] == "[unittest] agent_langgraph"
-    assert kwargs["base_environment_id"] == agent_infra.agent_langgraph_execution_environment.id  # fmt: skip
-    assert (
-        kwargs["base_environment_version_id"]
-        == agent_infra.agent_langgraph_execution_environment.version_id
-    )
-    assert kwargs["target_type"] == "AgenticWorkflow"
-    assert kwargs["target_name"] == "response"
-    assert kwargs["language"] == "python"
-    assert kwargs["use_case_ids"] == [agent_infra.use_case.id]
-    assert isinstance(kwargs["files"], list)
-    assert kwargs["runtime_parameter_values"] == [
-        agent_infra.pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
-            key="LLM_DATAROBOT_DEPLOYMENT_ID",
-            type="string",
-            value="model_id",
-        ),
-    ]
+    assert len(runtime_parameter_values) == 1
+    assert runtime_parameter_values[0].type == "string"
+    assert runtime_parameter_values[0].key == "SESSION_SECRET_KEY"
+    assert runtime_parameter_values[0].value is not None
 
 
 def test_agentic_playground_and_blueprint_created(monkeypatch):
@@ -329,16 +307,16 @@ def test_agentic_playground_and_blueprint_created(monkeypatch):
     # Check that Agentic Playground was created
     agent_infra.pulumi_datarobot.Playground.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.Playground.call_args
-    assert kwargs["resource_name"].startswith("Agentic Playground")
-    assert kwargs["name"] == "[unittest] agent_langgraph"
+    assert kwargs["resource_name"] == "[unittest] [agent_langgraph] Agentic Playground"
+    assert kwargs["name"] == "[unittest] [agent_langgraph] Agentic Playground"
     assert kwargs["use_case_id"] == agent_infra.use_case.id
     assert kwargs["playground_type"] == "agentic"
 
     # Check that LlmBlueprint was created and points to the created custom model
     agent_infra.pulumi_datarobot.LlmBlueprint.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.LlmBlueprint.call_args
-    assert kwargs["resource_name"].startswith("LLM Blueprint")
-    assert kwargs["name"] == "[unittest] agent_langgraph"
+    assert kwargs["resource_name"] == "[unittest] [agent_langgraph] LLM Blueprint"
+    assert kwargs["name"] == "[unittest] [agent_langgraph] LLM Blueprint"
     assert kwargs["llm_id"] == "chat-interface-custom-model"
     assert kwargs["prompt_type"] == "ONE_TIME_PROMPT"
     assert kwargs[
@@ -380,11 +358,6 @@ def test_agent_deployment_created_when_env(monkeypatch):
     agent_infra.pulumi_datarobot.PredictionEnvironment.assert_called_once()
     # Check that CustomModelDeployment was created
     agent_infra.CustomModelDeployment.assert_called_once()
-    # Check that pulumi.export was called for deployment id and endpoint
-    agent_infra.pulumi.export.assert_any_call(
-        "Agent Deployment ID " + agent_infra.agent_langgraph_asset_name,
-        agent_infra.CustomModelDeployment.return_value.id,
-    )
     agent_infra.pulumi.export.assert_any_call(
         "Agent Deployment Chat Endpoint " + agent_infra.agent_langgraph_asset_name,
         agent_infra.CustomModelDeployment.return_value.id.apply.return_value,

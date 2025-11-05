@@ -16,16 +16,6 @@ defaults:
   run:
     working-directory: agent_langgraph
 jobs:
-  docker-build-test:
-    name: "Agent: agent_langgraph Docker build and test"
-    runs-on: "ubuntu-latest"
-    steps:
-      - name: Checkout
-        uses: "actions/checkout@v5"
-      - name: Build Docker Image
-        run: |
-          cd docker_context
-          tar -czh . | docker build - -t agent_langgraph
   tests:
     name: "Agent: agent_langgraph ${{ matrix.python-version }}"
     runs-on: "ubuntu-latest"

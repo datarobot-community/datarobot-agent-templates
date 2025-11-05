@@ -23,6 +23,10 @@ includes:
     taskfile: ./agent_llamaindex/Taskfile.yml
     dir: ./agent_llamaindex/
     internal: true
+  agent_nat:
+    taskfile: ./agent_nat/Taskfile.yml
+    dir: ./agent_nat/
+    internal: true
 tasks:
   default:
     desc: "ℹ️ Show all available tasks (run `task --list-all` to see hidden tasks)"
@@ -41,6 +45,7 @@ tasks:
       - task: agent_generic_base:install
       - task: agent_langgraph:install
       - task: agent_llamaindex:install
+      - task: agent_nat:install
       - echo "Updating infra dependencies"
       - cd ./infra && uv sync --all-extras
     silent: true
@@ -56,6 +61,7 @@ tasks:
       - task: agent_generic_base:update
       - task: agent_langgraph:update
       - task: agent_llamaindex:update
+      - task: agent_nat:update
       - echo "Updating infra dependencies"
       - cd ./infra && uv sync --all-extras -U
     silent: true
@@ -70,6 +76,7 @@ tasks:
       - task: agent_generic_base:lint
       - task: agent_langgraph:lint
       - task: agent_llamaindex:lint
+      - task: agent_nat:lint
       - echo "Linting infra"
       - cd ./infra && uv run ruff check . --fix && uv run ruff format .
     silent: true

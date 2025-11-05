@@ -16,16 +16,6 @@ defaults:
   run:
     working-directory: agent_llamaindex
 jobs:
-  docker-build-test:
-    name: "Agent: agent_llamaindex Docker build and test"
-    runs-on: "ubuntu-latest"
-    steps:
-      - name: Checkout
-        uses: "actions/checkout@v5"
-      - name: Build Docker Image
-        run: |
-          cd docker_context
-          tar -czh . | docker build - -t agent_llamaindex
   tests:
     name: "Agent: agent_llamaindex ${{ matrix.python-version }}"
     runs-on: "ubuntu-latest"

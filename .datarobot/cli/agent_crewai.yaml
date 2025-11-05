@@ -1,0 +1,6 @@
+root:
+  - env: AGENT_CREWAI_ENDPOINT
+    type: string
+    default: "http://localhost:8842"
+    optional: true
+    help: "The local endpoint to access the agent. Should have a unique port."

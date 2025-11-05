@@ -15,8 +15,9 @@ tasks:
     desc: 🛠️ [agent_llamaindex] Install agent uv dependencies
     cmds:
       - echo "Updating local dependencies for agent_llamaindex"
-      - uv sync --extra dev --quiet
-    silent: true
+      - uv sync --extra dev
+      - if [ -f pyproject.toml ] && [ -d docker_context ]; then cp pyproject.toml docker_context/pyproject.toml; fi
+      - if [ -f uv.lock ] && [ -d docker_context ]; then cp uv.lock docker_context/uv.lock; fi
     aliases:
       - req
   update:
@@ -25,6 +26,12 @@ tasks:
     cmds:
       - echo "Updating local dependencies"
       - uv sync --extra dev -U
+    silent: true
+  add-dependency:
+    desc: 🛠️ [agent_llamaindex] Add provided packages as a new dependency to an agent
+    cmds:
+      - echo "Adding new dependency for agent_llamaindex into 'extras' dependency group"
+      - uv add --no-upgrade --group extras {{.CLI_ARGS}}
     silent: true
   lint:
     # Hidden to avoid showing in task list, run `task --list-all` to see it
@@ -64,21 +71,100 @@ tasks:
     silent: true
   cli:
     desc: 🖥️ [agent_llamaindex] Run the CLI with provided arguments
+    vars:
+      START_DEV: "{{.START_DEV}}"
     cmds:
       - echo "Running CLI {{.CLI_ARGS}}"
-      - "{{.CLEAN_PYTHON_ENV}} uv run cli.py {{.CLI_ARGS}}"
+      - |
+        if [ "{{.START_DEV}}" -eq "1" ]; then
+          # Kill any existing dev server processes
+          pkill -f 'uv run python dev.py' 2>/dev/null || true
+
+          # Start dev server in background
+          echo "🚀 Starting dev server in background..."
+          {{.CLEAN_PYTHON_ENV}} uv run python dev.py &
+          DEV_SERVER_PID=$!
+          echo "Dev server started with PID: $DEV_SERVER_PID"
+
+          # Wait for server to be ready
+          echo "⏳ Waiting for dev server to be ready..."
+          AGENT_ENDPOINT="http://localhost:8842"
+          if [ -n "$AGENT_LLAMAINDEX_ENDPOINT" ]; then
+            AGENT_ENDPOINT="$AGENT_LLAMAINDEX_ENDPOINT"
+          fi
+          i=0
+          while [ $i -lt 30 ]; do
+            if curl --silent --fail --max-time 2 "$AGENT_ENDPOINT/" >/dev/null 2>&1; then
+              echo "✅ Dev server is ready!"
+              break
+            fi
+            sleep 1
+            i=$((i + 1))
+            if [ $i -eq 30 ]; then
+              echo "❌ Dev server failed to start within 30 seconds"
+              pkill -f 'uv run python dev.py' 2>/dev/null || true
+              exit 1
+            fi
+          done
+        fi
+      - |
+        # Run CLI and handle cleanup regardless of exit code
+        CLI_EXIT_CODE=0
+        {{.CLEAN_PYTHON_ENV}} UV_PROJECT={{.TASKFILE_DIR}} uv run cli.py {{.CLI_ARGS}} || CLI_EXIT_CODE=$?
+        echo "CLI exited with code: $CLI_EXIT_CODE"
+
+        # Check if command failed and contains "execute"
+        if [ $CLI_EXIT_CODE -eq 1 ] && echo "{{.CLI_ARGS}}" | grep -q "execute "; then
+          echo ""
+          echo "❌ CLI command failed with exit status 1"
+          echo "💡 It looks like you're trying to execute an agent that requires a dev server."
+          echo "   Try one of these options:"
+          echo "   1. Start the dev server first: task agent_llamaindex:dev"
+          echo "   2. Or run with auto dev server: task agent_llamaindex:cli START_DEV=1 -- {{.CLI_ARGS}}"
+          echo ""
+        fi
+
+        # Clean up dev server processes if we started them
+        if [ "{{.START_DEV}}" -eq "1" ]; then
+          echo "🛑 Stopping dev server..."
+          pkill -f 'uv run python dev.py' 2>/dev/null || true
+          echo "✅ Dev server stopped"
+        fi
+
+        exit $CLI_EXIT_CODE
     silent: true
   dev:
-    # Hidden to avoid showing in task list, run `task --list-all` to see it
-    # desc: 🔨 [agent_llamaindex] Run the development server
-    env:
-      TARGET_NAME: response
-      FLASK_DEBUG: 1
+    desc: 🔨 [agent_llamaindex] Run the development server
     cmds:
-      - echo "Running development server on http://localhost:8842"
-      - "{{.CLEAN_PYTHON_ENV}} uv run drum server -cd custom_model --address localhost:8842 --target-type agenticworkflow"
-      - wait
-  build-docker:
+      - "{{.CLEAN_PYTHON_ENV}} uv run python dev.py"
+  dev-stop:
+    desc: 🛑 [agent_llamaindex] Stop the development server
+    cmds:
+      - echo "Stopping development server"
+      - pkill -f 'uv run python dev.py' 2>/dev/null || echo "No development server process found"
+  chainlit:
+    desc: "🛝 Run the ChainLit playground"
+    cmds:
+      - echo "🛝 Starting ChainLit playground"
+      - uv sync --all-extras
+      - uv run chainlit run --host 0.0.0.0 --port 8083 -w lit.py
+  create-docker-context:
+    desc: 🐳 [agent_llamaindex] Create the template for a local docker_context image
+    cmds:
+      - echo "Creating docker_context folder inside agent."
+      - rm -rf ./docker_context
+      - echo "Downloading datarobot-user-models repository..."
+      - curl -L -o datarobot-user-models.zip "https://github.com/datarobot/datarobot-user-models/archive/refs/heads/master.zip"
+      - echo "Extracting docker_context files..."
+      - unzip -q datarobot-user-models.zip "datarobot-user-models-master/public_dropin_environments/python311_genai_agents/*"
+      - cp -r datarobot-user-models-master/public_dropin_environments/python311_genai_agents ./docker_context
+      - rm -rf datarobot-user-models-master datarobot-user-models.zip
+      # We need to rename these from their production variants to their local variants
+      - rm ./docker_context/env_info.json
+      - mv ./docker_context/Dockerfile ./docker_context/Dockerfile.prod
+      - mv ./docker_context/Dockerfile.local ./docker_context/Dockerfile
+      - echo "Docker context created inside agent_llamaindex/docker_context"
+  build-docker-context:
     desc: 🐳 [agent_llamaindex] Build the Docker image
     cmds:
       - echo "Building Docker image"

@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/datarobot-community/datarobot-agent-templates">
-    <img src="docs/img/datarobot_logo.avif" width="600px" alt="DataRobot Logo"/>
+    <img src="./.github/datarobot_logo.avif" width="600px" alt="DataRobot Logo"/>
   </a>
 </p>
 <p align="center">
@@ -10,9 +10,7 @@
 <p align="center">
   <a href="https://datarobot.com">Homepage</a>
   ·
-  <a href="https://docs.datarobot.com/en/docs/gen-ai/genai-agents/index.html">Agentic Workflows</a>
-  ·
-  <a href="/docs/getting-started.md">Getting Started</a>
+  <a href="https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/index.html">Documentation</a>
   ·
   <a href="https://docs.datarobot.com/en/docs/get-started/troubleshooting/general-help.html">Support</a>
 </p>
@@ -26,57 +24,402 @@
   </a>
 </p>
 
-This repository provides ready-to-use templates for building and deploying AI agents with multi-agent frameworks. 
-These templates streamline the process of setting up your own agents with minimal configuration requirements. These 
-templates support local development and testing, as well as deployment to production environments within DataRobot.
+This repository provides ready-to-use templates for building and deploying agentic workflows with multi-agent frameworks.
+Agentic templates streamline the process of setting up new workflows with minimal configuration requirements.
+They support local development and testing, as well as deployment to production environments within DataRobot.
 
-If you are new to developing agentic workflows in DataRobot, we recommend starting with the
-[Getting Started](/docs/getting-started.md) guide which will help you create a simple document creation agentic workflow example.
+```diff
+-IMPORTANT: This repository updates frequently. Make sure to update your
+-local branch regularly to obtain the latest changes.
+```
 
 ---
-### DataRobot Agent Templates Navigation
-- [Prerequisites](/docs/getting-started-prerequisites.md)
-- [Getting started](/docs/getting-started.md)
-- [Updating Agentic Templates](/docs/getting-started-updating.md)
-- Developing Agents
-  - [Developing your agent](/docs/developing-agents.md)
-  - [Using the agent CLI](/docs/developing-agents-cli.md)
-  - [Adding python requirements](/docs/developing-agents-python-requirements.md)
-  - [Configuring LLM providers](/docs/developing-agents-llm-providers.md)
-  - [Adding tools to your agent](/docs/developing-agents-tools.md)
+
+# Table of contents
+
+- [Available templates](#available-templates)
+- [Installation](#installation)
+- [Create and deploy your agent](#create-and-deploy-your-agent)
+- [Develop your agent](#develop-your-agent)
+- [Get help](#get-help)
+
 ---
 
-## Available templates
+# Available templates
 
-This repository includes templates for three popular agent frameworks and a generic base template that can 
-be adapted to any framework of your choice. Each template includes a simple example agentic workflow with 3 agents and 
-3 tasks.
+This repository includes templates for three popular agent frameworks and a generic base template that can be adapted to any framework of your choice.
+Each template includes a simple example agentic workflow with 3 agents and 3 tasks.
 
-| Framework        | Description                                              | GitHub Repo | Docs  |
-|------------------|----------------------------------------------------------|-------------|-------|
-| **CrewAI**       | A multi-agent framework with focus on role-based agents. | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
-| **Generic Base** | A flexible template for any custom framework.            | -           | -     |
-| **LangGraph**    | Multi-agent orchestration with state graphs.             | [GitHub](https://github.com/langchain-ai/langgraph) | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
-| **Llama-Index**  | A framework for building RAG systems.                    | [GitHub](https://github.com/run-llama/llama_index)  | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
+| Framework        | Description                                                | GitHub Repo | Docs  |
+|------------------|------------------------------------------------------------|-------------|-------|
+| **CrewAI**       | A multi-agent framework with focus on role-based agents.   | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
+| **Generic Base** | A barebones template that can be adapted to any framework. | -           | -     |
+| **LangGraph**    | Multi-agent orchestration with state graphs.               | [GitHub](https://github.com/langchain-ai/langgraph) | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
+| **Llama-Index**  | A framework for building RAG systems.                      | [GitHub](https://github.com/run-llama/llama_index)  | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
 
-## Cloning the repository
-#### For cloud users:
-_Clone the repository to your local machine using Git or you can 
-[download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip)._
+# Installation
+
+```diff
+-IMPORTANT: This repository is only compatible with macOS and Linux operating systems.
+```
+
+> If you are using Windows, consider using a [DataRobot codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html), Windows Subsystem for Linux (WSL), or a virtual machine running a supported OS.
+
+Ensure you have the following tools installed and on your system at the required version (or newer).
+It is **recommended to install the tools system-wide** rather than in a virtual environment to ensure they are available in your terminal session.
+
+## Prerequisite tools
+
+The following tools are required to install and run the agent templates.
+For detailed installation instructions, see [Installation instructions](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-install.html#installation-instructions) in the DataRobot documentation.
+
+| Tool         | Version    | Description                     | Installation guide            |
+|--------------|------------|---------------------------------|-------------------------------|
+| **git**      | >= 2.30.0  | A version control system.       | [git installation guide](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) |
+| **uv**       | >= 0.6.10  | A Python package manager.       | [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/)     |
+| **Pulumi**   | >= 3.163.0 | An Infrastructure as Code tool. | [Pulumi installation guide](https://www.pulumi.com/docs/iac/download-install/)        |
+| **Taskfile** | >= 3.43.3  | A task runner.                  | [Taskfile installation guide](https://taskfile.dev/docs/installation)                 |
+
+> **IMPORTANT**: You will also need a compatible C++ compiler and build tools installed on your system to compile some Python packages.
+
+<!-- Deprecated instructions as full details are now available in the DataRobot documentation.
+
+## Installation instructions
+
+The following sections provide common installation instructions for each tool on both macOS and Linux.
+
+- [macOS](#macos)
+- [Linux](#linux)
+
+> **IMPORTANT**: Installation instructions may change over time. If you encounter any issues, [refer to the official documentation links](#prerequisite-tools) and websites above for the most current installation instructions.
+
+### macOS
+
+The easiest way to install the required tools on macOS is using [Homebrew](https://brew.sh/).
+If it is not already installed, run the following command to install it:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Once it finishes, you can install and/or update the required tools using the following commands:
+
+- [**Xcode Command Line Tools**](https://developer.apple.com/documentation/xcode/):
+
+  ```bash
+  xcode-select --install
+  ```
+
+- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git), if not already installed by Xcode:
+
+  ```bash
+  brew install git
+  ```
+
+- [**uv**](https://docs.astral.sh/uv/getting-started/installation/):
+  ```bash
+  brew install uv
+  ```
+
+- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/):
+  ```bash
+  brew install pulumi
+  ```
+
+- [**Taskfile**](https://taskfile.dev/docs/installation):
+  
+  ```bash
+  brew install go-task/tap/go-task
+  ```
+  
+### Linux
+
+The easiest way to install the required tools on Linux is using `curl` to download and run the installation scripts.
+
+- **Build tools** can be installed using the OS package manager:
+  - On Ubuntu/Debian:
+
+    ```bash
+    sudo apt-get update
+    sudo apt-get install build-essential
+    ```
+  
+  - On Fedora:
+  
+    ```bash
+    sudo dnf groupinstall "Development Tools"
+    ```
+
+  - On CentOS/RHEL:
+  
+    ```bash
+    sudo yum groupinstall "Development Tools"
+    ```
+
+- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) can be installed using your package manager.
+  - On Ubuntu/Debian:
+  
+    ```bash
+    sudo apt-get update
+    sudo apt-get install git
+    ```
+
+  - On Fedora:
+  
+    ```bash
+    sudo dnf install git
+    ```
+
+  - On CentOS/RHEL:
+  
+    ```bash
+    sudo yum install git
+    ```
+
+- [**uv**](https://docs.astral.sh/uv/getting-started/installation/)
+
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+
+- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/)
+
+  ```bash
+  curl -fsSL https://get.pulumi.com/ | sh
+  ```
+
+- [**Taskfile**](https://taskfile.dev/docs/installation)
+
+  ```bash
+  curl -sL https://taskfile.dev/install.sh | sh
+  ```
+
+> **NOTE**: You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
+> after installation to ensure the tools are available in your terminal session.
+
+-->
+
+# Create and deploy your agent
+
+```diff
+-IMPORTANT: Ensure all prerequisites are installed before proceeding.
+```
+
+This guide walks you through setting up an agentic workflow using one of several provided templates.
+It returns a Markdown (`.md`) document about your specified topic based on the research of a series of agents.
+The example workflow contains these 3 agents:
+
+- **Researcher**: Gathers information on a given topic using web search.
+- **Writer**: Creates a document based on the research.
+- **Editor**: Reviews and edits the document for clarity and correctness.
+
+## Clone the agent template repository
+
+The method for cloning the repository is dependent on whether your DataRobot application instance&mdash;either Managed SaaS (cloud) or Self-Managed (on-premise).
+
+### Cloud users
+
+You can either clone the repository to your local machine using Git or [download it as a ZIP file](https://github.com/datarobot-community/datarobot-agent-templates/archive/refs/heads/main.zip).
+
 ```bash
 git clone https://github.com/datarobot-community/datarobot-agent-templates.git
+cd datarobot-agent-templates
 ```
 
-#### For on-premise users:
-_Clone the release branch for your installation using Git:_
+### On-premise users
+
+Clone the release branch for your installation using Git, replacing `[YOUR_DATA_ROBOT_VERSION]` with the version of DataRobot you are using:
+
 ```bash
-git clone -b release/11.1 https://github.com/datarobot-community/datarobot-agent-templates.git
+git clone -b release/[YOUR_DATA_ROBOT_VERSION] https://github.com/datarobot-community/datarobot-agent-templates.git
+cd datarobot-agent-templates
 ```
 
-## Get help
+> **NOTE**: To customize or track your own workflows, you can 
+> [fork this repository](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo), 
+> [change the remote URL](https://docs.github.com/en/get-started/git-basics/managing-remote-repositories), or 
+> [create a new repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository).
 
-If you encounter issues or have questions, use one of the following options:
-- Check that your template is up to date by following the [Updating Agentic Templates](/docs/getting-started-updating.md) guide.
-- Check the documentation for your chosen framework.
+## Locate your DataRobot API key and endpoint
+
+The section after this requires you to add your DataRobot API key and endpoint to the environment variables file.
+See the [DataRobot API keys and endpoints](https://docs.datarobot.com/en/docs/get-started/acct-mgmt/acct-settings/api-key-mgmt.html) documentation for specific steps on how to locate them.
+
+<!-- Deprecated instructions as full details are now available in the DataRobot documentation.
+
+1. Log in to your DataRobot account.
+2. Click the user icon in the top right of the UI and select **API keys and tools**.
+
+  <img src="./.github/img/api-keys-tools.png" width="300" />
+
+3. Copy your DataRobot API endpoint and paste it into a temporary file.
+
+  <img src="./.github/img/api-endpoint.png" width="500" />
+
+4. Copy your DataRobot API key and paste it into the temporary file as well.
+
+  <img src="./.github/img/api-key.png" width="600" />
+
+Continue with the next section to configure your environment variables.
+
+-->
+
+## Configure environment variables
+
+Create an `.env` file in the root directory before running any commands:
+
+1. Copy the sample environment file.
+
+  ```bash
+  cp .env.sample .env
+  ```
+
+2. Edit the file with your preferred text editor.
+
+  ```bash
+  nano .env  # or vim .env, code .env, etc.
+  ```
+
+3. Paste the DataRobot API key and endpoint that you copied in [Locate your DataRobot API key and endpoint](#locate-your-datarobot-api-key-and-endpoint) into your `.env` file. Leave other variables at their default values during setup.
+
+```bash
+# DataRobot API key and endpoint
+DATAROBOT_API_TOKEN=<Your API key>
+DATAROBOT_ENDPOINT=<Your API endpoint>
+```
+
+## Start and choose an agent framework
+
+Run the helper script to start development:
+
+```bash
+task start
+```
+
+> **NOTE**: If you encounter errors with `task start`, ensure you've completed all [prerequisite](#installation) steps.
+
+Specify which of the four available templates you would like to use during the `task start` process:
+
+| Directory            | Framework   | Description                                    |
+|----------------------|-------------|------------------------------------------------|
+| `agent_crewai`       | CrewAI      | Role-based multi-agent collaboration framework |
+| `agent_generic_base` | Generic     | Base template for any framework                |
+| `agent_langgraph`    | LangGraph   | State-based orchestration framework            |
+| `agent_llamaindex`   | Llama-Index | RAG-focused framework                          |
+
+When prompted to setup the Python environment and install prerequisites, type `y` and press `Enter`.
+
+After selection, setup will finish, leaving only files relevant to the template specified in your branch.
+**To switch frameworks later, re-clone the repository and run the steps above again**.
+
+> **NOTE**: Run `task` (with no parameters) from the root directory to see all available commands.
+> Aside from `start`, none are necessary to complete installation.
+
+## Test your agent for local development
+
+Now your agent is ready to be tested locally using the CLI.
+Local testing requires a DataRobot connection for LLM communication.
+Ensure your `.env` file has the correct API token and endpoint, as detailed in [Configure environment variables](#configure-environment-variables).
+
+Run the following command to test your agent:
+
+```bash
+# You can run task agent:dev in a separate window or use `START_DEV=1` to run the local agent inline
+task agent:cli START_DEV=1 -- execute --user_prompt 'Tell me about Generative AI'
+```
+
+Depending on the framework you selected, the test output will vary.
+An example of the output is shown below:
+
+```bash
+{
+  "id": "5379a74f-045e-4720-9c1b-3feb560d77ee",
+  "choices": "[Truncated for display]",
+  "created": 1761327008,
+  "model": "datarobot-deployed-llm",
+  "object": "chat.completion",
+  "service_tier": null,
+  "system_fingerprint": null,
+  "usage": {
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "pipeline_interactions": "[Truncated for display]",
+  "datarobot_association_id": "3eb947b0-8a58-4088-a873-5a9f4aeeaeb4",
+  "trace_id": "19e357620b00cee0130314cc58646ddf"
+}
+```
+
+Continue to the next section to deploy and test in a production-like environment.
+
+## Deploy your agent
+
+Next, deploy your agent to DataRobot, which requires a Pulumi login. If you do not have one, use `pulumi login --local` for local login or create a free account at [the Pulumi website](https://app.pulumi.com/signup).
+
+```bash
+task deploy
+```
+
+During the deploy process, you will be asked to provide a **Pulumi stack name** (e.g., `myagent`, `test`, etc.) to identify your DataRobot resources.
+Once you have provided one, the deploy process provides a preview link.
+Review the Pulumi preview and approve changes by typing `yes` or pressing `Enter`.
+
+> **NOTE**: If prompted to perform an update, select `yes` and press `Enter`.
+
+Deployment takes several minutes.
+When complete, a resource summary with important IDs/URLs is displayed:
+
+```bash
+Outputs:
+    AGENT_CREWAI_DEPLOYMENT_ID                                    : "1234567890abcdef"
+    Agent Custom Model Chat Endpoint [agentic-test] [agent_crewai]: "https://[YOUR_DATAROBOT_ENDPOINT]/api/v2/genai/agents/fromCustomModel/68fbc280c69b6e4682665af5/chat/"
+    Agent Deployment Chat Endpoint [agentic-test] [agent_crewai]  : "https://[YOUR_DATAROBOT_ENDPOINT]/api/v2/deployments/68fbc2ae159b0495e6f834b9/chat/completions"
+    Agent Execution Environment ID [agentic-test] [agent_crewai]  : "68fbc0eab1af04e6982ff7b1"
+    Agent Playground URL [agentic-test] [agent_crewai]            : "https://[YOUR_DATAROBOT_ENDPOINT]/usecases/68fbc0eafb98d9d6d59c65db/agentic-playgrounds/68fbc0ebf95336f437e1d653/comparison/chats"
+    LLM_DEFAULT_MODEL                                             : "datarobot/azure/gpt-4o-mini"
+    USE_DATAROBOT_LLM_GATEWAY                                     : "1"
+
+Resources:
+    + 10 created
+
+Duration: 10m12s
+
+```
+
+### Find your deployment ID
+
+The deployment ID is displayed in the terminal output after running `task deploy`.
+In the example output at the end of the previous section, the deployment ID is `1234567890abcdef`.
+
+For more details, see [Model information](https://docs.datarobot.com/en/docs/mlops/deployment/deploy-methods/add-deploy-info.html#model-information) in the DataRobot documentation.
+
+## Test your deployed agent
+
+Use the CLI to test your deployed agent.
+In the following command, replace <YOUR_DEPLOYMENT_ID> with your actual deployment ID from the previous step:
+
+```bash
+task agent:cli -- execute-deployment --user_prompt 'Tell me about Generative AI' --deployment_id <YOUR_DEPLOYMENT_ID>
+```
+
+## Develop your agent
+
+Once setup is complete, you are ready customize your agent, allowing you to add your own logic and functionality to the agent.
+See the following documentation for more details:
+
+- [Customize your agent](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-development.html)
+- [Add tools to your agent](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-tools-integrate.html)
+- [Configure LLM providers](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-llm-providers.html)
+- [Use the agent CLI](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-cli-guide.html)
+- [Add Python requirements](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-python-packages.html)
+
+# Get help
+
+If you encounter issues or have questions, try the following:
+
+- Check [the documentation](#available-templates) for your chosen framework.
 - [Contact DataRobot](https://docs.datarobot.com/en/docs/get-started/troubleshooting/general-help.html) for support.
 - Open an issue on the [GitHub repository](https://github.com/datarobot-community/datarobot-agent-templates).

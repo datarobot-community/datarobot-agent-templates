@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -48,3 +50,11 @@ def mock_agent_response():
             "total_tokens": 3,
         },
     )
+
+
+@pytest.fixture()
+def load_model_result():
+    with ThreadPoolExecutor(1) as thread_pool_executor:
+        event_loop = asyncio.new_event_loop()
+        thread_pool_executor.submit(asyncio.set_event_loop, event_loop).result()
+        yield (thread_pool_executor, event_loop)

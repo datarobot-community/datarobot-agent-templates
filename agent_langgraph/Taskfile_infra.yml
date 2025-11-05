@@ -11,6 +11,13 @@ vars:
       else
         echo ""
       fi
+  PULUMI_STACK_COMMAND:
+    sh: |
+      if [ -n "${PULUMI_STACK_NAME:-}" ]; then
+        echo "--stack $PULUMI_STACK_NAME"
+      else
+        echo ""
+      fi
 tasks:
   install:
     silent: true
@@ -33,28 +40,56 @@ tasks:
       - uv run ruff format --check .
       - uv run ruff check .
       - uv run mypy --pretty .
+  test:
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🧪 [infra] Run tests
+    cmds:
+      - echo "Running pytest on tests"
+      - "{{.CLEAN_PYTHON_ENV}} uv run pytest -vv ./tests/"
+    silent: true
+  test-coverage:
+    # Hidden to avoid showing in task list, run `task --list-all` to see it
+    # desc: 🧪 [infra] Run tests with coverage
+    cmds:
+      - echo "Running pytest on tests"
+      - "{{.CLEAN_PYTHON_ENV}} uv run pytest -vv --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml ./tests/"
+    silent: true
   init:
     silent: true
     # desc: "🆕 Initialize a new Pulumi stack"
     cmds:
       - uv run pulumi stack init
+  pulumi:
+    silent: true
+    # desc: "Generic pulumi execution command with env variables"
+    cmds:
+      - uv run pulumi {{.CLI_ARGS}}
   select:
     silent: true
     # desc: "🚂 Select a Stack"
     cmds:
       - uv run pulumi stack select
+  select-env-stack:
+    silent: true
+    cmds:
+      - |
+        if [ -n "${PULUMI_STACK_NAME:-}" ]; then
+          {{.CLEAN_PYTHON_ENV}} uv run pulumi stack select -c $PULUMI_STACK_NAME
+        fi
   info:
     silent: true
     # desc: "ℹ️ Show Pulumi stack info"
     cmds:
-      - uv run pulumi stack
+      - task: select-env-stack
+      - uv run pulumi stack {{.PULUMI_STACK_COMMAND}}
   build:
     desc: "🔵 Deploy only playground testing resources with pulumi"
     env:
       AGENT_DEPLOY: 0
     cmds:
       - echo "[infra] Running pulumi up with [BUILD] mode"
-      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+      - task: select-env-stack
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   deploy:
     desc: "🟢 Deploy all resources with pulumi"
@@ -62,17 +97,20 @@ tasks:
       AGENT_DEPLOY: 1
     cmds:
       - echo "Running pulumi up with [DEPLOY] mode"
-      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+      - task: select-env-stack
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   refresh:
     desc: "⚪️ Refresh and sync local pulumi state"
     cmds:
       - echo "Running pulumi refresh"
-      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi refresh {{.CLI_ARGS}}"
+      - task: select-env-stack
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi refresh {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   destroy:
     desc: "🔴 Teardown all deployed resources with pulumi"
     cmds:
       - echo "Running pulumi destroy"
-      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi destroy {{.CLI_ARGS}}"
+      - task: select-env-stack
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi destroy {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true

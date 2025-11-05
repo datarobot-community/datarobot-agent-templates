@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.3.0
+- Comprehensive LLM Provider Support - Added complete support for multiple LLM configurations with streamlined switching between providers.
+- Now supports LLM Gateway Direct, LLM Blueprint with LLM Gateway, LLM Blueprint with External LLMs (Azure OpenAI, Amazon Bedrock, Google Vertex AI, Anthropic), Registered Models (NVIDIA NIMs), and Already Deployed Models.
+- Automatic credential management through DataRobot's secure credential system, flexible model selection, and simplified configuration through environment variables and symlinks.
+- See the updated [Configuring LLM Providers documentation](/docs/developing-agents-llm-providers.md) for setup instructions and examples.
+- Add built-in support for connecting agents to MCP servers
+- Rename `api_tests` root folder to `tests` for clarity
+- Add .env helper instead of raising error if a `.env` is not found
+- If `PULUMI_STACK_NAME` is in the environment, then the stack will be automatically passed to pulumi
+- Update `datarobot` package to include latest functionality
+- Fix an issue where stream=true on an agent that didn't support streaming would raise an error
+- Add support for `datarobot_genai` package to streamline development
+- Remove docker_context by default. Replace with `task create-docker-context` if needed.
+- All package installation auto-synchronized with `uv` by default
+- Support for full streaming in langgraph
+- Initial support for `async` invoke capabilities inside servers
+- Support for development server execution for faster iteration. Can optionally use `task agent:cli START_DEV=1 -- ` to automatically start and stop a dev server to use legacy dev flow.
+
 ## 11.2.4
 - Add support for streaming in agentic workflows
 - Add support for streaming to the agent:cli tools
@@ -19,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update package versions
 - Add initial NAT package support to framework
 - Add example documentation for calling deployed agents and using streaming
+
 
 ## 11.2.3
 - Fix connecting to llm documentation
@@ -130,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add 90 second default timeout for LLM calls to code templates
 - Add instructions how to reduce the size of the responses to the template code
 - Resolve starlette vulnerability in docker_context containers
-- Do not raise an error in the `llm_datarobot` component if llm gateway is enabled.
+- Do not raise an error in the `llm` component if llm gateway is enabled.
 
 ## 0.1.12
 - Add pipeline for bumping release version automatically and updating changelog versions.

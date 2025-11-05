@@ -1,0 +1,124 @@
+---
+root:
+  - env: INFRA_ENABLE_LLM
+    type: string
+    optional: true
+    help: "Select the type of LLM integration to enable."
+    options:
+      - name: "External LLM"
+        value: "blueprint_with_external_llm.py"
+        requires: external_llm
+      - name: "LLM Gateway"
+        value: "gateway_direct.py"
+      - name: "LLM Gateway with External Model"
+        value: "blueprint_with_llm_gateway.py"
+      - name: "DataRobot Deployed LLM"
+        value: "deployed_llm.py"
+        requires: deployed_llm
+      - name: "Registered Model with an LLM Blueprint"
+        value: "registered_model.py"
+        requires: registered_model
+
+deployed_llm:
+  - env: TEXTGEN_DEPLOYMENT_ID
+    type: string
+    optional: false
+    help: "The deployment ID of the DataRobot Deployed LLM to use."
+
+registered_model:
+  - env: TEXTGEN_REGISTERED_MODEL_ID
+    type: string
+    optional: false
+    help: "The ID of the registered model with an LLM blueprint to use."
+  - env: DATAROBOT_TIMEOUT_MINUTES
+    type: number
+    default: 30
+    optional: true
+    help: "The timeout in minutes for DataRobot operations. Default is 30 minutes."
+
+external_llm:
+  - env: LLM_DEFAULT_MODEL
+    type: string
+    default: "gpt-3.5-turbo"
+    optional: true
+    help: "The name of the external LLM model to use."
+  - key: external_llm_provider
+    type: string
+    default: "OpenAI"
+    optional: false
+    multiple: true
+    options:
+      - name: "Azure with OpenAI"
+        requires: azure_openai
+      - name: "Google VertexAI"
+        requires: vertexai
+      - name: "Anthropic"
+        requires: anthropic
+      - name: "Bedrock"
+        requires: bedrock
+      - name: "Cohere"
+        requires: cohere
+      - name: "TogetherAI"
+        requires: togetherai
+    help: "The provider of the external LLM model. Options are OpenAI, Azure, VertexAI, Anthropic, etc."
+
+azure_openai:
+  - env: OPENAI_API_KEY
+    type: string
+    optional: false
+    help: "The API key for OpenAI."
+  - env: OPENAI_API_BASE
+    type: string
+    optional: false
+    help: "The API base URL for OpenAI, usually in the format https://<your_custom_endpoint>.openai.azure.com"
+  - env: OPENAI_API_DEPLOYMENT_ID
+    type: string
+    optional: false
+    help: "The deployment ID for the OpenAI model."
+  - env: OPENAI_API_VERSION
+    type: string
+    optional: false
+    help: "The API version for OpenAI."
+
+bedrock:
+  - env: AWS_ACCESS_KEY_ID
+    type: string
+    optional: false
+    help: "The AWS access key ID for Bedrock."
+  - env: AWS_SECRET_ACCESS_KEY
+    type: string
+    optional: false
+    help: "The AWS secret access key for Bedrock."
+  - env: AWS_REGION_NAME
+    type: string
+    optional: false
+    help: "The AWS region name for Bedrock, e.g., us-east-1."
+
+vertexai:
+  - env: VERTEXAI_APPLICATION_CREDENTIALS
+    type: string
+    optional: false
+    help: "The path to the VertexAI application credentials JSON file."
+  - env: VERTEXAI_SERVICE_ACCOUNT
+    type: string
+    optional: false
+    help: "The Google service account email."
+
+anthropic:
+  - env: ANTHROPIC_API_KEY
+    type: string
+    optional: false
+    help: "The API key for Anthropic."
+
+cohere:
+  - env: COHERE_API_KEY
+    type: string
+    optional: false
+    help: "The API key for Cohere."
+
+togetherai:
+  - env: TOGETHERAI_API_KEY
+    type: string
+    optional: false
+    help: "The API key for TogetherAI."
+

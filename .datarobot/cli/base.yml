@@ -1,0 +1,56 @@
+---
+root:
+  - env: PULUMI_CONFIG_PASSPHRASE
+    type: string
+    default: "123"
+    optional: true
+    help: "The passphrase used to encrypt and decrypt the private key. This value is required if you're not using pulumi cloud."
+  - env: DATAROBOT_DEFAULT_USE_CASE
+    type: string
+    default:
+    optional: true
+    help: "The default use case for this application. If not set, a new use case will be created automatically"
+  - env: SESSION_SECRET_KEY
+    type: string
+    default: ""
+    optional: false
+    help: "A secret key used to sign session cookies. This should be a long, random string."
+  - env: DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT
+    type: string
+    default: "[DataRobot] Python 3.11 GenAI Agents"
+    optional: true
+    help: "The default execution environment for the agents custom model."
+  - key: data_source
+    type: string
+    default:
+    optional: true
+    help: "The data source to use for this application."
+    options:
+      - name: "Google"
+        requires: google_data_source
+      - name: "Box"
+        requires: box_data_source
+
+google_data_source:
+  - env: GOOGLE_CLIENT_ID
+    type: string
+    default:
+    optional: false
+    help: "The client ID for the Google data source."
+  - env: GOOGLE_CLIENT_SECRET
+    type: string
+    default:
+    optional: false
+    help: "The client secret for the Google data source."
+
+box_data_source:
+  - env: BOX_CLIENT_ID
+    type: string
+    default:
+    optional: false
+    help: "The client ID for the Box data source."
+  - env: BOX_CLIENT_SECRET
+    type: string
+    default:
+    optional: false
+    help: "The client secret for the Box data source."

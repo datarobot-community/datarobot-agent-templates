@@ -14,7 +14,7 @@
 import os
 import re
 import shutil
-from typing import cast
+from typing import cast, Final
 
 import datarobot as dr
 import pulumi
@@ -30,10 +30,9 @@ from datarobot_pulumi_utils.schema.exec_envs import RuntimeEnvironments
 
 from . import project_dir, use_case
 
-# To use the LLM DataRobot Deployment in your Agent, uncomment the line below
-# from .llm_datarobot import app_runtime_parameters as llm_datarobot_app_runtime_parameters
+from .llm import custom_model_runtime_parameters as llm_custom_model_runtime_parameters
 
-DEFAULT_EXECUTION_ENVIRONMENT = "[DataRobot] Python 3.11 GenAI Agents"
+DEFAULT_EXECUTION_ENVIRONMENT = "Python 3.11 GenAI Agents"
 
 EXCLUDE_PATTERNS = [
     re.compile(pattern)
@@ -53,7 +52,6 @@ EXCLUDE_PATTERNS = [
 
 __all__ = [
     "agent_generic_base_application_name",
-    "agent_generic_base_resource_name",
     "agent_generic_base_application_path",
     "agent_generic_base_execution_environment_id",
     "agent_generic_base_prediction_environment",
@@ -66,18 +64,11 @@ __all__ = [
 ]
 
 agent_generic_base_application_name: str = "agent_generic_base"
-agent_generic_base_asset_name: str = f"[{PROJECT_NAME}] agent_generic_base"
+agent_generic_base_asset_name: str = f"[{PROJECT_NAME}] [agent_generic_base]"
 agent_generic_base_application_path = project_dir.parent / "agent_generic_base"
 
-# Allow overriding the resource name suffix via an environment variable
-# For an agent in the folder "agent-crewai", the env var would be AGENT_CREWAI_RESOURCE_NAME_SUFFIX
-# The following could be added to your .env file to customize the resource name:
-# AGENT_CREWAI_RESOURCE_NAME_SUFFIX="my-custom-suffix"
-resource_name_suffix = os.environ.get(
-    agent_generic_base_application_name.upper() + "_RESOURCE_NAME_SUFFIX",
-    agent_generic_base_application_name,
-)
-agent_generic_base_resource_name: str = f"[{resource_name_suffix}]"
+SESSION_SECRET_KEY: Final[str] = "SESSION_SECRET_KEY"
+session_secret_key = os.environ.get(SESSION_SECRET_KEY)
 
 
 def get_custom_model_files(custom_model_folder: str) -> list[tuple[str, str]]:
@@ -140,6 +131,7 @@ def synchronize_pyproject_dependencies():
 
 
 synchronize_pyproject_dependencies()
+pulumi.info("NOTE: [unknown] values will be populated after performing an update.")  # fmt: skip
 
 # Start of Pulumi settings and application infrastructure
 if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
@@ -147,7 +139,7 @@ if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
         "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT"
     ]
 
-    if agent_generic_base_execution_environment_id == DEFAULT_EXECUTION_ENVIRONMENT:
+    if DEFAULT_EXECUTION_ENVIRONMENT in agent_generic_base_execution_environment_id:
         pulumi.info(
             "Using default GenAI Agents execution environment "
             + agent_generic_base_execution_environment_id
@@ -155,8 +147,7 @@ if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
         agent_generic_base_execution_environment = (
             pulumi_datarobot.ExecutionEnvironment.get(
                 id=RuntimeEnvironments.PYTHON_311_GENAI_AGENTS.value.id,
-                resource_name="Execution Environment [PRE-EXISTING] "
-                + agent_generic_base_resource_name,
+                resource_name=agent_generic_base_asset_name + " Execution Environment",
             )
         )
     else:
@@ -167,8 +158,7 @@ if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
         agent_generic_base_execution_environment = (
             pulumi_datarobot.ExecutionEnvironment.get(
                 id=agent_generic_base_execution_environment_id,
-                resource_name="Execution Environment [PRE-EXISTING] "
-                + agent_generic_base_resource_name,
+                resource_name=agent_generic_base_asset_name + " Execution Environment",
             )
         )
 else:
@@ -181,9 +171,8 @@ else:
         )
         agent_generic_base_execution_environment = (
             pulumi_datarobot.ExecutionEnvironment(
-                resource_name="Execution Environment [docker_context] "
-                + agent_generic_base_resource_name,
-                name=agent_generic_base_asset_name,
+                resource_name=agent_generic_base_asset_name + " Execution Environment",
+                name=agent_generic_base_asset_name + " Execution Environment",
                 description="Execution Environment for "
                 + agent_generic_base_asset_name,
                 programming_language="python",
@@ -197,9 +186,8 @@ else:
         pulumi.info("Using docker_context folder to compile the execution environment")
         agent_generic_base_execution_environment = (
             pulumi_datarobot.ExecutionEnvironment(
-                resource_name="Execution Environment [docker_context] "
-                + agent_generic_base_resource_name,
-                name=agent_generic_base_asset_name,
+                resource_name=agent_generic_base_asset_name + " Execution Environment",
+                name=agent_generic_base_asset_name + " Execution Environment",
                 description="Execution Environment for "
                 + agent_generic_base_asset_name,
                 programming_language="python",
@@ -214,23 +202,24 @@ agent_generic_base_custom_model_files = get_custom_model_files(
     str(os.path.join(str(agent_generic_base_application_path), "custom_model"))
 )
 
-agent_generic_base_runtime_parameters = []
-if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
-    agent_generic_base_runtime_parameters = [
-        pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
-            key="LLM_DATAROBOT_DEPLOYMENT_ID",
-            type="string",
-            value=os.environ["LLM_DATAROBOT_DEPLOYMENT_ID"],
-        ),
-    ]
-elif os.environ.get("USE_DATAROBOT_LLM_GATEWAY") in [0, "0", False, "false", "False"]:
-    from .llm_datarobot import app_runtime_parameters  # type: ignore[import-not-found]
-
-    agent_generic_base_runtime_parameters = app_runtime_parameters  # type: ignore
+pulumi.export("SESSION_SECRET_KEY", session_secret_key)
+session_secret_cred = pulumi_datarobot.ApiTokenCredential(
+    "agent_generic_base Session Secret Key",
+    args=pulumi_datarobot.ApiTokenCredentialArgs(
+        api_token=str(session_secret_key),
+    ),
+)
+custom_model_credential_runtime_parameters = [
+    pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+        type="string",
+        key=SESSION_SECRET_KEY,
+        value=session_secret_cred.id.apply(lambda id: str(id)),
+    ),
+]
 
 agent_generic_base_custom_model = pulumi_datarobot.CustomModel(
-    resource_name="Custom Model " + agent_generic_base_resource_name,
-    name=agent_generic_base_asset_name,
+    resource_name=agent_generic_base_asset_name + " Custom Model",
+    name=agent_generic_base_asset_name + " Custom Model",
     base_environment_id=agent_generic_base_execution_environment.id,
     base_environment_version_id=agent_generic_base_execution_environment.version_id,
     target_type="AgenticWorkflow",
@@ -238,7 +227,8 @@ agent_generic_base_custom_model = pulumi_datarobot.CustomModel(
     language="python",
     use_case_ids=[use_case.id],
     files=agent_generic_base_custom_model_files,
-    runtime_parameter_values=agent_generic_base_runtime_parameters,
+    runtime_parameter_values=llm_custom_model_runtime_parameters
+    + custom_model_credential_runtime_parameters,
 )
 
 agent_generic_base_custom_model_endpoint = agent_generic_base_custom_model.id.apply(
@@ -246,16 +236,16 @@ agent_generic_base_custom_model_endpoint = agent_generic_base_custom_model.id.ap
 )
 
 agent_generic_base_playground = pulumi_datarobot.Playground(
-    name=agent_generic_base_asset_name,
-    resource_name="Agentic Playground " + agent_generic_base_resource_name,
+    name=agent_generic_base_asset_name + " Agentic Playground",
+    resource_name=agent_generic_base_asset_name + " Agentic Playground",
     description="Experimentation Playground for " + agent_generic_base_asset_name,
     use_case_id=use_case.id,
     playground_type="agentic",
 )
 
 agent_generic_base_blueprint = pulumi_datarobot.LlmBlueprint(
-    name=agent_generic_base_asset_name,
-    resource_name="LLM Blueprint " + agent_generic_base_resource_name,
+    name=agent_generic_base_asset_name + " LLM Blueprint",
+    resource_name=agent_generic_base_asset_name + " LLM Blueprint",
     playground_id=agent_generic_base_playground.id,
     llm_id="chat-interface-custom-model",
     llm_settings=pulumi_datarobot.LlmBlueprintLlmSettingsArgs(
@@ -279,14 +269,9 @@ agent_generic_base_playground_url = pulumi.Output.format(
 
 
 # Export the IDs of the created resources
-pulumi.export("Agent Use Case ID " + agent_generic_base_asset_name, use_case.id)
 pulumi.export(
     "Agent Execution Environment ID " + agent_generic_base_asset_name,
     agent_generic_base_execution_environment.id,
-)
-pulumi.export(
-    "Agent Custom Model ID " + agent_generic_base_asset_name,
-    agent_generic_base_custom_model.id,
 )
 pulumi.export(
     "Agent Custom Model Chat Endpoint " + agent_generic_base_asset_name,
@@ -300,20 +285,20 @@ agent_generic_base_agent_deployment_id: pulumi.Output[str] = cast(
 )
 if os.environ.get("AGENT_DEPLOY") != "0":
     agent_generic_base_prediction_environment = pulumi_datarobot.PredictionEnvironment(
-        resource_name="Prediction Environment " + agent_generic_base_resource_name,
-        name=agent_generic_base_asset_name,
+        resource_name=agent_generic_base_asset_name + " Prediction Environment",
+        name=agent_generic_base_asset_name + " Prediction Environment",
         platform=dr.enums.PredictionEnvironmentPlatform.DATAROBOT_SERVERLESS,
         opts=pulumi.ResourceOptions(retain_on_delete=False),
     )
 
     agent_generic_base_registered_model_args = RegisteredModelArgs(
-        resource_name="Registered Model " + agent_generic_base_resource_name,
-        name=agent_generic_base_asset_name,
+        resource_name=agent_generic_base_asset_name + " Registered Model",
+        name=agent_generic_base_asset_name + " Registered Model",
     )
 
     agent_generic_base_deployment_args = DeploymentArgs(
-        resource_name="Deployment " + agent_generic_base_resource_name,
-        label=agent_generic_base_asset_name,
+        resource_name=agent_generic_base_asset_name + " Deployment",
+        label=agent_generic_base_asset_name + " Deployment",
         association_id_settings=pulumi_datarobot.DeploymentAssociationIdSettingsArgs(
             column_names=["association_id"],
             auto_generate_id=False,
@@ -332,7 +317,7 @@ if os.environ.get("AGENT_DEPLOY") != "0":
     )
 
     agent_generic_base_agent_deployment = CustomModelDeployment(
-        resource_name="Chat Deployment " + agent_generic_base_resource_name,
+        resource_name=agent_generic_base_asset_name + " Chat Deployment",
         use_case_ids=[use_case.id],
         custom_model_version_id=agent_generic_base_custom_model.version_id,
         prediction_environment=agent_generic_base_prediction_environment,
@@ -346,10 +331,6 @@ if os.environ.get("AGENT_DEPLOY") != "0":
         lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/deployments/{id}/chat/completions"
     )
 
-    pulumi.export(
-        "Agent Deployment ID " + agent_generic_base_asset_name,
-        agent_generic_base_agent_deployment.id,
-    )
     export(
         agent_generic_base_application_name.upper() + "_DEPLOYMENT_ID",
         agent_generic_base_agent_deployment.id,
@@ -366,3 +347,28 @@ agent_generic_base_app_runtime_parameters = [
         value=agent_generic_base_agent_deployment_id,
     ),
 ]
+
+# Add MCP runtime parameters if configured
+if os.environ.get("MCP_DEPLOYMENT_ID"):
+    mcp_deployment_id = os.environ["MCP_DEPLOYMENT_ID"]
+    agent_generic_base_app_runtime_parameters.append(
+        pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs(
+            key="MCP_DEPLOYMENT_ID",
+            type="string",
+            value=mcp_deployment_id,
+        )
+    )
+    pulumi.info(f"MCP configured with DataRobot MCP Server: {mcp_deployment_id}")
+
+# Allow external mcp server.  Currently code will use MCP_DEPLOYMENT_ID first and if that is empty
+# then use the EXTERNAL_MCP_URL
+if os.environ.get("EXTERNAL_MCP_URL"):
+    external_mcp_url = os.environ["EXTERNAL_MCP_URL"].rstrip("/")
+    agent_generic_base_app_runtime_parameters.append(
+        pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs(
+            key="EXTERNAL_MCP_URL",
+            type="string",
+            value=external_mcp_url,
+        )
+    )
+    pulumi.info(f"MCP configured with external server: {external_mcp_url}")
