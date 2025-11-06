@@ -20,6 +20,7 @@ from datarobot_genai.core.agents import (
     UsageMetrics,
     default_usage_metrics,
     extract_user_prompt_content,
+    is_streaming,
 )
 from openai.types.chat import CompletionCreateParams
 
@@ -95,7 +96,7 @@ class MyAgent(BaseAgent):
         # The following code demonstrate both a synchronous and streaming response.
         # You can choose one or the other based on your use case, they function the same.
         # The main difference is returning a generator for streaming or a final response for sync.
-        if completion_create_params.get("stream"):
+        if is_streaming(completion_create_params):
             # Streaming response: yield each message as it is generated
             async def stream_generator() -> InvokeReturn:
                 # -----------------------------------------------------------

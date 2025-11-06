@@ -55,7 +55,8 @@ Each template includes a simple example agentic workflow with 3 agents and 3 tas
 | **CrewAI**       | A multi-agent framework with focus on role-based agents.   | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
 | **Generic Base** | A barebones template that can be adapted to any framework. | -           | -     |
 | **LangGraph**    | Multi-agent orchestration with state graphs.               | [GitHub](https://github.com/langchain-ai/langgraph) | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
-| **Llama-Index**  | A framework for building RAG systems.                      | [GitHub](https://github.com/run-llama/llama_index)  | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
+| **Llama-Index**  | A framework for building RAG systems.                      | [GitHub](https://github.com/run-llama/llama_index) | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
+| **NVIDIA NeMo Agent Toolkit** | A framework for connecting enterprise agents to data sources and tools. | [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit) | [Docs](https://developer.nvidia.com/nemo-agent-toolkit)|
 
 # Installation
 
@@ -71,7 +72,7 @@ It is **recommended to install the tools system-wide** rather than in a virtual 
 ## Prerequisite tools
 
 The following tools are required to install and run the agent templates.
-For detailed installation instructions, see [Installation instructions](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-install.html#installation-instructions) in the DataRobot documentation.
+For detailed installation steps, see [Installation instructions](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-install.html#installation-instructions) in the DataRobot documentation.
 
 | Tool         | Version    | Description                     | Installation guide            |
 |--------------|------------|---------------------------------|-------------------------------|
@@ -81,123 +82,6 @@ For detailed installation instructions, see [Installation instructions](https://
 | **Taskfile** | >= 3.43.3  | A task runner.                  | [Taskfile installation guide](https://taskfile.dev/docs/installation)                 |
 
 > **IMPORTANT**: You will also need a compatible C++ compiler and build tools installed on your system to compile some Python packages.
-
-<!-- Deprecated instructions as full details are now available in the DataRobot documentation.
-
-## Installation instructions
-
-The following sections provide common installation instructions for each tool on both macOS and Linux.
-
-- [macOS](#macos)
-- [Linux](#linux)
-
-> **IMPORTANT**: Installation instructions may change over time. If you encounter any issues, [refer to the official documentation links](#prerequisite-tools) and websites above for the most current installation instructions.
-
-### macOS
-
-The easiest way to install the required tools on macOS is using [Homebrew](https://brew.sh/).
-If it is not already installed, run the following command to install it:
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-Once it finishes, you can install and/or update the required tools using the following commands:
-
-- [**Xcode Command Line Tools**](https://developer.apple.com/documentation/xcode/):
-
-  ```bash
-  xcode-select --install
-  ```
-
-- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git), if not already installed by Xcode:
-
-  ```bash
-  brew install git
-  ```
-
-- [**uv**](https://docs.astral.sh/uv/getting-started/installation/):
-  ```bash
-  brew install uv
-  ```
-
-- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/):
-  ```bash
-  brew install pulumi
-  ```
-
-- [**Taskfile**](https://taskfile.dev/docs/installation):
-  
-  ```bash
-  brew install go-task/tap/go-task
-  ```
-  
-### Linux
-
-The easiest way to install the required tools on Linux is using `curl` to download and run the installation scripts.
-
-- **Build tools** can be installed using the OS package manager:
-  - On Ubuntu/Debian:
-
-    ```bash
-    sudo apt-get update
-    sudo apt-get install build-essential
-    ```
-  
-  - On Fedora:
-  
-    ```bash
-    sudo dnf groupinstall "Development Tools"
-    ```
-
-  - On CentOS/RHEL:
-  
-    ```bash
-    sudo yum groupinstall "Development Tools"
-    ```
-
-- [**Git**](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) can be installed using your package manager.
-  - On Ubuntu/Debian:
-  
-    ```bash
-    sudo apt-get update
-    sudo apt-get install git
-    ```
-
-  - On Fedora:
-  
-    ```bash
-    sudo dnf install git
-    ```
-
-  - On CentOS/RHEL:
-  
-    ```bash
-    sudo yum install git
-    ```
-
-- [**uv**](https://docs.astral.sh/uv/getting-started/installation/)
-
-  ```bash
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
-
-- [**Pulumi**](https://www.pulumi.com/docs/iac/download-install/)
-
-  ```bash
-  curl -fsSL https://get.pulumi.com/ | sh
-  ```
-
-- [**Taskfile**](https://taskfile.dev/docs/installation)
-
-  ```bash
-  curl -sL https://taskfile.dev/install.sh | sh
-  ```
-
-> **NOTE**: You may need to restart your terminal or run `source ~/.bashrc` (or `source ~/.zshrc` or equivalent)
-> after installation to ensure the tools are available in your terminal session.
-
--->
 
 # Create and deploy your agent
 
@@ -245,25 +129,6 @@ cd datarobot-agent-templates
 The section after this requires you to add your DataRobot API key and endpoint to the environment variables file.
 See the [DataRobot API keys and endpoints](https://docs.datarobot.com/en/docs/get-started/acct-mgmt/acct-settings/api-key-mgmt.html) documentation for specific steps on how to locate them.
 
-<!-- Deprecated instructions as full details are now available in the DataRobot documentation.
-
-1. Log in to your DataRobot account.
-2. Click the user icon in the top right of the UI and select **API keys and tools**.
-
-  <img src="./.github/img/api-keys-tools.png" width="300" />
-
-3. Copy your DataRobot API endpoint and paste it into a temporary file.
-
-  <img src="./.github/img/api-endpoint.png" width="500" />
-
-4. Copy your DataRobot API key and paste it into the temporary file as well.
-
-  <img src="./.github/img/api-key.png" width="600" />
-
-Continue with the next section to configure your environment variables.
-
--->
-
 ## Configure environment variables
 
 Create an `.env` file in the root directory before running any commands:
@@ -283,9 +148,12 @@ Create an `.env` file in the root directory before running any commands:
 3. Paste the DataRobot API key and endpoint that you copied in [Locate your DataRobot API key and endpoint](#locate-your-datarobot-api-key-and-endpoint) into your `.env` file. Leave other variables at their default values during setup.
 
 ```bash
-# DataRobot API key and endpoint
-DATAROBOT_API_TOKEN=<Your API key>
-DATAROBOT_ENDPOINT=<Your API endpoint>
+# Your DataRobot API token.
+# Refer to https://docs.datarobot.com/en/docs/api/api-quickstart/index.html#configure-your-environment for help.
+DATAROBOT_API_TOKEN=<YOUR_API_KEY>
+
+# The URL of your DataRobot instance API.
+DATAROBOT_ENDPOINT=<YOUR_API_ENDPOINT>
 ```
 
 ## Start and choose an agent framework
@@ -306,6 +174,7 @@ Specify which of the four available templates you would like to use during the `
 | `agent_generic_base` | Generic     | Base template for any framework                |
 | `agent_langgraph`    | LangGraph   | State-based orchestration framework            |
 | `agent_llamaindex`   | Llama-Index | RAG-focused framework                          |
+| `agent_nat`          | NeMo Agent Toolkit | NVIDIA NeMo Agent Toolkit framework     |
 
 When prompted to setup the Python environment and install prerequisites, type `y` and press `Enter`.
 
@@ -357,7 +226,8 @@ Continue to the next section to deploy and test in a production-like environment
 
 ## Deploy your agent
 
-Next, deploy your agent to DataRobot, which requires a Pulumi login. If you do not have one, use `pulumi login --local` for local login or create a free account at [the Pulumi website](https://app.pulumi.com/signup).
+Next, deploy your agent to DataRobot, which requires a Pulumi login.
+If you do not have one, use `pulumi login --local` for local login or create a free account at [the Pulumi website](https://app.pulumi.com/signup).
 
 ```bash
 task deploy
@@ -375,17 +245,17 @@ When complete, a resource summary with important IDs/URLs is displayed:
 ```bash
 Outputs:
     AGENT_CREWAI_DEPLOYMENT_ID                                    : "1234567890abcdef"
-    Agent Custom Model Chat Endpoint [agentic-test] [agent_crewai]: "https://[YOUR_DATAROBOT_ENDPOINT]/api/v2/genai/agents/fromCustomModel/68fbc280c69b6e4682665af5/chat/"
-    Agent Deployment Chat Endpoint [agentic-test] [agent_crewai]  : "https://[YOUR_DATAROBOT_ENDPOINT]/api/v2/deployments/68fbc2ae159b0495e6f834b9/chat/completions"
+    Agent Custom Model Chat Endpoint [agentic-test] [agent_crewai]: "https://[YOUR_DATAROBOT_ENDPOINT]/api/v2/genai/agents/fromCustomModel/1234567890abcdef/chat/"
+    Agent Deployment Chat Endpoint [agentic-test] [agent_crewai]  : "https://[YOUR_DATAROBOT_ENDPOINT]/api/v2/deployments/1234567890abcdef/chat/completions"
     Agent Execution Environment ID [agentic-test] [agent_crewai]  : "68fbc0eab1af04e6982ff7b1"
-    Agent Playground URL [agentic-test] [agent_crewai]            : "https://[YOUR_DATAROBOT_ENDPOINT]/usecases/68fbc0eafb98d9d6d59c65db/agentic-playgrounds/68fbc0ebf95336f437e1d653/comparison/chats"
+    Agent Playground URL [agentic-test] [agent_crewai]            : "https://[YOUR_DATAROBOT_ENDPOINT]/usecases/68fbc0eafb98d9d6d59c65db/agentic-playgrounds/1234567890abcdef/comparison/chats"
     LLM_DEFAULT_MODEL                                             : "datarobot/azure/gpt-4o-mini"
     USE_DATAROBOT_LLM_GATEWAY                                     : "1"
 
 Resources:
     + 10 created
 
-Duration: 10m12s
+Duration: 2m12s
 
 ```
 
@@ -403,6 +273,33 @@ In the following command, replace <YOUR_DEPLOYMENT_ID> with your actual deployme
 
 ```bash
 task agent:cli -- execute-deployment --user_prompt 'Tell me about Generative AI' --deployment_id <YOUR_DEPLOYMENT_ID>
+```
+
+> **NOTE**: The command may take a few minutes to complete.
+
+Once the repsonse has been processed, the response displays.
+The output below is an example, but your actual response will vary.
+
+```bash
+Execution result preview:
+{
+  "id": "f47cb925-39e0-4507-a843-5aa8b9420b01",
+  "choices": "[Truncated for display]",
+  "created": 1762448266,
+  "model": "datarobot-deployed-llm",
+  "object": "chat.completion",
+  "service_tier": null,
+  "system_fingerprint": null,
+  "usage": {
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "datarobot_association_id": "461e6489-505b-43f9-84c3-3832ef0e3a25",
+  "pipeline_interactions": "[Truncated for display]"
+}
 ```
 
 ## Develop your agent

@@ -42,7 +42,7 @@ os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
 # ------------------------------------------------------------------------------
 
 
-from typing import Any, AsyncGenerator, Iterator, Union, cast
+from typing import Any, AsyncGenerator, Iterator, Union
 
 # ruff: noqa: E402
 from agent import MyAgent
@@ -52,8 +52,8 @@ from datarobot_genai.core.chat import (
     CustomModelStreamingResponse,
     initialize_authorization_context,
     to_custom_model_chat_response,
+    to_custom_model_streaming_response,
 )
-from helpers import to_custom_model_streaming_response
 from openai.types.chat import CompletionCreateParams
 from openai.types.chat.completion_create_params import (
     CompletionCreateParamsNonStreaming,
@@ -145,14 +145,11 @@ def chat(
     # Check if the result is a generator (streaming response)
     if isinstance(result, AsyncGenerator):
         # Streaming response
-        return cast(
-            Iterator[CustomModelStreamingResponse],
-            to_custom_model_streaming_response(
-                thread_pool_executor,
-                event_loop,
-                result,
-                model=completion_create_params.get("model"),
-            ),
+        return to_custom_model_streaming_response(
+            thread_pool_executor,
+            event_loop,
+            result,
+            model=completion_create_params.get("model"),
         )
     else:
         # Non-streaming response

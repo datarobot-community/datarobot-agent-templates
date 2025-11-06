@@ -14,24 +14,15 @@
 from typing import Any, List, Optional, Union
 
 from config import Config
-from crewai import LLM, Agent, Crew, Task
+from crewai import LLM, Agent, Task
 from crewai_event_listener import CrewAIEventListener
-from datarobot_genai.core.agents import (
-    BaseAgent,
-    InvokeReturn,
-    UsageMetrics,
-    extract_user_prompt_content,
-)
 from datarobot_genai.crewai.agent import (
     build_llm,
-    create_pipeline_interactions_from_messages,
 )
-from mcp_client import mcp_tools_context
-from openai.types.chat import CompletionCreateParams
-from ragas.messages import AIMessage, HumanMessage, ToolMessage
+from datarobot_genai.crewai.base import CrewAIAgent
 
 
-class MyAgent(BaseAgent):
+class MyAgent(CrewAIAgent):
     """MyAgent is a custom agent that uses CrewAI to plan, write, and edit content.
     It utilizes DataRobot's LLM Gateway or a specific deployment for language model interactions.
     This example illustrates 3 agents that handle content creation tasks, including planning, writing,
@@ -77,74 +68,6 @@ class MyAgent(BaseAgent):
         self.config = Config()
         self.default_model = self.config.llm_default_model
         self.event_listener = CrewAIEventListener()
-        self._mcp_tools: List[Any] = []  # Default to empty tools list
-
-    def set_mcp_tools(self, tools: List[Any]) -> None:
-        """Set MCP tools for all agents."""
-        self._mcp_tools = tools
-
-    async def invoke(
-        self, completion_create_params: CompletionCreateParams
-    ) -> InvokeReturn:
-        """Run the agent with the provided completion parameters.
-
-        [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
-
-        Args:
-            completion_create_params: The completion request parameters including input topic and settings.
-        Returns:
-            Union[
-                Generator[tuple[str, Any | None, dict[str, int]], None, None],
-                tuple[str, Any | None, dict[str, int]],
-            ]: For streaming requests, returns a generator yielding tuples of (response_text, pipeline_interactions, usage_metrics).
-               For non-streaming requests, returns a single tuple of (response_text, pipeline_interactions, usage_metrics).
-        """
-        # Retrieve the starting user prompt from the CompletionCreateParams
-        user_prompt_content = extract_user_prompt_content(completion_create_params)
-
-        # Print commands may need flush=True to ensure they are displayed in real-time.
-        print("Running agent with user prompt:", user_prompt_content, flush=True)
-
-        # Use MCP context manager to handle connection lifecycle
-        with mcp_tools_context(
-            api_base=self.api_base, api_key=self.api_key
-        ) as mcp_tools:
-            # Set MCP tools for all agents if mcp is not configured this is effectivelya no-op
-            self.set_mcp_tools(mcp_tools)
-
-            # Create and invoke the CrewAI Agentic Workflow with the inputs
-            crewai_agentic_workflow = Crew(
-                agents=[self.agent_planner, self.agent_writer, self.agent_editor],
-                tasks=[self.task_plan, self.task_write, self.task_edit],
-                verbose=self.verbose,
-            )
-            crew_output = crewai_agentic_workflow.kickoff(
-                inputs={"topic": user_prompt_content}
-            )
-
-            # Extract the final agent response as the synchronous response
-            response_text = str(crew_output.raw)
-
-            # Create a list of events from the event listener
-            events: Optional[List[Union[HumanMessage, AIMessage, ToolMessage]]] = (
-                self.event_listener.messages
-            )
-            if events and len(events) > 0:
-                last_message = events[-1].content
-                if last_message != response_text:
-                    events.append(AIMessage(content=response_text))
-            else:
-                events = None
-
-            pipeline_interactions = create_pipeline_interactions_from_messages(events)
-
-            usage_metrics: UsageMetrics = {
-                "completion_tokens": crew_output.token_usage.completion_tokens,
-                "prompt_tokens": crew_output.token_usage.prompt_tokens,
-                "total_tokens": crew_output.token_usage.total_tokens,
-            }
-
-            return response_text, pipeline_interactions, usage_metrics
 
     def llm(
         self,
@@ -179,11 +102,23 @@ class MyAgent(BaseAgent):
             timeout=self.timeout,
         )
 
+    def make_kickoff_inputs(self, user_prompt_content: str) -> dict[str, Any]:
+        """Map the user prompt into Crew kickoff inputs expected by tasks/agents."""
+        return {"topic": str(user_prompt_content)}
+
+    @property
+    def agents(self) -> List[Agent]:
+        return [self.agent_planner, self.agent_writer, self.agent_editor]
+
+    @property
+    def tasks(self) -> List[Task]:
+        return [self.task_plan, self.task_write, self.task_edit]
+
     @property
     def agent_planner(self) -> Agent:
         """Content Planner agent."""
         return Agent(
-            role="Content Planner",
+            role="Planner",
             goal="Plan engaging and factually accurate content on {topic}",
             backstory="You're working on planning a blog article about the topic: {topic}. You collect "
             "information that helps the audience learn something and make informed decisions. Your work is "
@@ -198,7 +133,7 @@ class MyAgent(BaseAgent):
     def agent_writer(self) -> Agent:
         """Content Writer agent."""
         return Agent(
-            role="Content Writer",
+            role="Writer",
             goal="Write insightful and factually accurate opinion piece about the topic: {topic}",
             backstory="You're working on writing a new opinion piece about the topic: {topic}. You base your writing "
             "on the work of the Content Planner, who provides an outline and relevant context about the topic. "

@@ -17,6 +17,7 @@ from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
 from agent import MyAgent
+from ragas import MultiTurnSample
 from ragas.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
 
 
@@ -277,7 +278,7 @@ class TestMyAgentCrewAI:
         with patch.object(MyAgent, "llm", return_value=mock_llm):
             agent.agent_planner
             mock_agent.assert_called_once_with(
-                role="Content Planner",
+                role="Planner",
                 goal=ANY,
                 backstory=ANY,
                 allow_delegation=False,
@@ -293,7 +294,7 @@ class TestMyAgentCrewAI:
         with patch.object(MyAgent, "llm", return_value=mock_llm):
             agent.agent_writer
             mock_agent.assert_called_once_with(
-                role="Content Writer",
+                role="Writer",
                 goal=ANY,
                 backstory=ANY,
                 allow_delegation=False,
@@ -354,7 +355,7 @@ class TestMyAgentCrewAI:
                 agent=ANY,
             )
 
-    @patch("agent.Crew")
+    @patch("datarobot_genai.crewai.base.Crew")
     @patch("agent.CrewAIEventListener")
     @patch("agent.Agent")
     def test_chat(
@@ -387,6 +388,8 @@ class TestMyAgentCrewAI:
             AIMessage(content="How are you today?"),
         ]
         mock_event_listener.return_value = Mock(messages=events)
+        # Ensure the actual agent instance uses our mocked event listener
+        agent.event_listener = mock_event_listener.return_value
 
         # Setup mocks
         completion_create_params = {
@@ -399,6 +402,10 @@ class TestMyAgentCrewAI:
             patch.object(MyAgent, "task_plan"),
             patch.object(MyAgent, "task_write"),
             patch.object(MyAgent, "task_edit"),
+            patch(
+                "datarobot_genai.crewai.agent.create_pipeline_interactions_from_messages",
+                return_value=MultiTurnSample(user_input=events),
+            ),
         ):
             response = chat(
                 completion_create_params, load_model_result=load_model_result
@@ -406,7 +413,7 @@ class TestMyAgentCrewAI:
 
         # Assert results - check the pipeline_interactions - other sections of the
         # results are already being checked in test_custom_model.py::test_chat
-        completion = json.loads(response.json())
+        completion = json.loads(response.model_dump_json())
         actual_events = json.loads(completion["pipeline_interactions"])["user_input"]
         for expected_message, actual_message in zip(events, actual_events):
             assert expected_message.content == actual_message["content"]
