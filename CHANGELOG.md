@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.3.2
+
+- Documentations updates.
+- `NatAgent` is now a part of `datarobot-genai`.
+- Pin execution environment version.
+
+## 11.3.1
+
+- Documentations updates.
+- Hotfix for datarobot-moderations.
+
 ## 11.3.0
 - Comprehensive LLM Provider Support - Added complete support for multiple LLM configurations with streamlined switching between providers.
 - Now supports LLM Gateway Direct, LLM Blueprint with LLM Gateway, LLM Blueprint with External LLMs (Azure OpenAI, Amazon Bedrock, Google Vertex AI, Anthropic), Registered Models (NVIDIA NIMs), and Already Deployed Models.

@@ -59,7 +59,7 @@ functions:
       You must create a well-written blog post in markdown format, ready for publication, each section should have 2 or 3 paragraphs.
 llms:
   datarobot_llm:
-    _type: datarobot_llm_gateway
+    _type: datarobot-llm-gateway
     model_name: azure/gpt-4o-2024-11-20
     temperature: 0.0
 workflow:

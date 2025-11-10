@@ -136,7 +136,7 @@ Create an `.env` file in the root directory before running any commands:
 1. Copy the sample environment file.
 
   ```bash
-  cp .env.sample .env
+  cp .env.template .env
   ```
 
 2. Edit the file with your preferred text editor.

@@ -24,7 +24,7 @@ tasks:
     desc: 🛠️ [infra] Install infra uv dependencies
     cmds:
       - echo "Updating local dependencies for infra"
-      - uv sync --quiet
+      - uv sync --extra dev --quiet
   lint:
     silent: true
     # desc: "🧹 Run linters"
@@ -37,8 +37,8 @@ tasks:
     silent: true
     # desc: "🧹 Check whether the codebase is linted"
     cmds:
-      - uv run ruff format --check .
-      - uv run ruff check .
+      - uv run ruff format --check --diff .
+      - uv run ruff check  --diff .
       - uv run mypy --pretty .
   test:
     # Hidden to avoid showing in task list, run `task --list-all` to see it

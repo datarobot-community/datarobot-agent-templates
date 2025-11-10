@@ -211,11 +211,20 @@ custom_model_credential_runtime_parameters = [
     ),
 ]
 
+base_environment_version_id: str | pulumi.Output[str] = (
+    agent_llamaindex_execution_environment.version_id
+)
+pinned_version_id = os.environ.get(
+    "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", ""
+)
+if pinned_version_id and re.match("^[a-f\d]{24}$", pinned_version_id):
+    base_environment_version_id = pinned_version_id
+
 agent_llamaindex_custom_model = pulumi_datarobot.CustomModel(
     resource_name=agent_llamaindex_asset_name + " Custom Model",
     name=agent_llamaindex_asset_name + " Custom Model",
     base_environment_id=agent_llamaindex_execution_environment.id,
-    base_environment_version_id=agent_llamaindex_execution_environment.version_id,
+    base_environment_version_id=base_environment_version_id,
     target_type="AgenticWorkflow",
     target_name="response",
     language="python",

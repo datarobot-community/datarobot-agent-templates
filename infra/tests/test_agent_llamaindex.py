@@ -289,6 +289,30 @@ def test_custom_model_created(monkeypatch):
     assert runtime_parameter_values[0].value is not None
 
 
+def test_custom_model_created_pinned_version_id(monkeypatch):
+    """Test that pulumi_datarobot.CustomModel is created with correct arguments."""
+    monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
+    monkeypatch.setenv(
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", "690cd2f698419673f938f7c4"
+    )
+
+    import importlib
+    import infra.agent_llamaindex as agent_infra
+
+    # Reset the mock to clear calls from the initial import
+    agent_infra.pulumi_datarobot.CustomModel.reset_mock()
+
+    environment_variables = {
+        "SESSION_SECRET_KEY": "secret_value",
+    }
+    with patch.dict(os.environ, environment_variables):
+        importlib.reload(agent_infra)
+
+    agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
+    args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
+    assert kwargs["base_environment_version_id"] == "690cd2f698419673f938f7c4"
+
+
 def test_agentic_playground_and_blueprint_created(monkeypatch):
     """Test that pulumi_datarobot.Playground and pulumi_datarobot.LlmBlueprint are created
     and the Playground URL is added to outputs."""

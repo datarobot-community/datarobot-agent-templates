@@ -82,21 +82,6 @@ class MyAgent(LlamaIndexAgent):
         preferred_model: str | None = None,
         auto_model_override: bool = True,
     ) -> DataRobotLiteLLM:
-        """Returns the DataRobotLiteLLM to use for a given model.
-
-        If a `preferred_model` is provided, it will be used. Otherwise, the default model will be used.
-        If auto_model_override is True, it will try and use the model specified in the request
-        but automatically back out to the default model if the LLM Gateway is not configured
-
-        Args:
-            preferred_model: Optional[str]: The model to use. If none, it defaults to config.llm_default_model.
-            auto_model_override: Optional[bool]: If True, it will try and use the model
-                specified in the request but automatically back out if the LLM Gateway is
-                not available.
-
-        Returns:
-            DataRobotLiteLLM: The model to use.
-        """
         api_base = self.litellm_api_base(self.config.llm_deployment_id)
         model = preferred_model
         if preferred_model is None:
