@@ -12,15 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 import os
 
 from datarobot_drum.drum.root_predictors.prediction_server import PredictionServer
 
 from custom_model.config import Config
 
+parser = argparse.ArgumentParser(description="Run the development server")
+parser.add_argument("--autoreload", action="store_true", help="Enable autoreload")
+
 if __name__ == "__main__":
+    args = parser.parse_args()
+
     os.environ["TARGET_NAME"] = "response"
-    os.environ["FLASK_DEBUG"] = "1"
+    if args.autoreload:
+        os.environ["FLASK_DEBUG"] = "1"
+
     config = Config()
     port = config.local_dev_port
     print(f"Running development server on http://localhost:{port}")

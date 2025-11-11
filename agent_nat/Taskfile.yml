@@ -130,7 +130,7 @@ tasks:
   dev:
     desc: 🔨 [agent_nat] Run the development server
     cmds:
-      - "{{.CLEAN_PYTHON_ENV}} uv run python dev.py"
+      - "{{.CLEAN_PYTHON_ENV}} uv run python dev.py --autoreload"
   dev-stop:
     desc: 🛑 [agent_nat] Stop the development server
     cmds:

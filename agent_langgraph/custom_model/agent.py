@@ -103,7 +103,7 @@ class MyAgent(LangGraphAgent):
     def agent_planner(self) -> Any:
         return create_react_agent(
             self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
-            tools=[],
+            tools=self.mcp_tools,
             prompt=make_system_prompt(
                 "You are a content planner. You are working with a content writer and editor colleague.\n"
                 "You're working on planning a blog article about the topic. You collect information that helps the "
@@ -127,7 +127,7 @@ class MyAgent(LangGraphAgent):
     def agent_writer(self) -> Any:
         return create_react_agent(
             self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
-            tools=[],
+            tools=self.mcp_tools,
             prompt=make_system_prompt(
                 "You are a content writer. You are working with a planner and editor colleague.\n"
                 "You're working on writing a new opinion piece about the topic. You base your writing on the work "
@@ -155,7 +155,7 @@ class MyAgent(LangGraphAgent):
     def agent_editor(self) -> Any:
         return create_react_agent(
             self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
-            tools=[],
+            tools=self.mcp_tools,
             prompt=make_system_prompt(
                 "You are a content editor. You are working with a planner and writer colleague.\n"
                 "You are an editor who receives a blog post from the Content Writer. Your goal is to review the "
@@ -176,6 +176,12 @@ class MyAgent(LangGraphAgent):
     def _add_the_last_message_and_go_to_next_node(
         self, node_name: str, result: MessagesState
     ) -> Command[Any]:
+        last_msg = result["messages"][-1]
+        tool_calls = getattr(last_msg, "tool_calls", [])
+        # If the agent hasn't called all the tools it wants yet, leave the execution of the
+        # graph to the langgraph engine
+        if tool_calls:
+            return Command()
         result["messages"][-1] = HumanMessage(
             content=result["messages"][-1].content, name=node_name
         )

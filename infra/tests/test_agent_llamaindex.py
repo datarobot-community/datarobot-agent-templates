@@ -36,6 +36,11 @@ def pulumi_mocks(monkeypatch):
     mock_llm_module = MagicMock()
     mock_llm_module.custom_model_runtime_parameters = []
     monkeypatch.setitem(sys.modules, "infra.llm", mock_llm_module)
+    # Mock out the MCP Server and just expose the runtime parameters as it is the only public
+    # interface required for this module.
+    mock_mcp_module = MagicMock()
+    mock_mcp_module.mcp_custom_model_runtime_parameters = []
+    monkeypatch.setitem(sys.modules, "infra.mcp", mock_mcp_module)
     # Mock pulumi_datarobot resources
     monkeypatch.setattr("pulumi_datarobot.ExecutionEnvironment", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.CustomModel", MagicMock())
@@ -280,13 +285,6 @@ def test_custom_model_created(monkeypatch):
     assert kwargs["language"] == "python"
     assert kwargs["use_case_ids"] == [agent_infra.use_case.id]
     assert isinstance(kwargs["files"], list)
-
-    runtime_parameter_values = kwargs["runtime_parameter_values"]
-
-    assert len(runtime_parameter_values) == 1
-    assert runtime_parameter_values[0].type == "string"
-    assert runtime_parameter_values[0].key == "SESSION_SECRET_KEY"
-    assert runtime_parameter_values[0].value is not None
 
 
 def test_custom_model_created_pinned_version_id(monkeypatch):
@@ -589,3 +587,84 @@ name = "old-project"
         assert (
             tmp_path / "docker_context" / "pyproject.toml"
         ).read_text() == new_content
+
+
+class TestMaybeImportFromModule:
+    def test_maybe_import_from_module_success(self):
+        """Test that maybe_import_from_module successfully imports an existing module."""
+        import infra.agent_llamaindex as agent_infra
+
+        # The fixture sets up the mocked MCP module with mcp_custom_model_runtime_parameters
+        result = agent_infra.maybe_import_from_module(
+            "mcp", "mcp_custom_model_runtime_parameters"
+        )
+        assert result is not None
+
+    def test_maybe_import_from_module_missing_module(self, monkeypatch):
+        """Test that maybe_import_from_module returns None when module is not available."""
+        import infra.agent_llamaindex as agent_infra
+
+        # Mock importlib.import_module to raise ImportError
+        def mock_import_module(name, package=None):
+            raise ImportError(f"No module named '{name}'")
+
+        monkeypatch.setattr("importlib.import_module", mock_import_module)
+
+        # Attempt to import from the non-existent module
+        result = agent_infra.maybe_import_from_module(
+            "mcp", "mcp_custom_model_runtime_parameters"
+        )
+        assert result is None
+
+    def test_maybe_import_from_module_empty_module_name(self):
+        """Test that maybe_import_from_module returns None with empty module name."""
+        import infra.agent_llamaindex as agent_infra
+
+        result = agent_infra.maybe_import_from_module("", "some_attribute")
+        assert result is None
+
+
+class TestGetMcpCustomModelRuntimeParameters:
+    def test_get_mcp_custom_model_runtime_parameters_from_module(self):
+        """Test that MCP runtime parameters are loaded from the module when available."""
+        import infra.agent_llamaindex as agent_infra
+
+        result = agent_infra.get_mcp_custom_model_runtime_parameters()
+        # The fixture sets up a mock module with empty list
+        assert isinstance(result, list)
+
+    def test_get_mcp_custom_model_runtime_parameters_fallback_to_env(self, monkeypatch):
+        """Test that MCP runtime parameters fall back to environment variables when module is unavailable."""
+        import infra.agent_llamaindex as agent_infra
+
+        # Set up environment variables
+        monkeypatch.setenv("MCP_DEPLOYMENT_ID", "test-deployment-123")
+        monkeypatch.setenv("EXTERNAL_MCP_URL", "https://example.com/mcp")
+
+        # Mock importlib.import_module to raise ImportError
+        def mock_import_module(name, package=None):
+            raise ImportError(f"No module named '{name}'")
+
+        monkeypatch.setattr("importlib.import_module", mock_import_module)
+
+        # Get runtime parameters - should fall back to environment variables
+        result = agent_infra.get_mcp_custom_model_runtime_parameters()
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+
+        # Check MCP_DEPLOYMENT_ID parameter
+        mcp_deployment_param = next(
+            (p for p in result if p.key == "MCP_DEPLOYMENT_ID"), None
+        )
+        assert mcp_deployment_param is not None
+        assert mcp_deployment_param.type == "string"
+        assert mcp_deployment_param.value == "test-deployment-123"
+
+        # Check EXTERNAL_MCP_URL parameter
+        external_mcp_param = next(
+            (p for p in result if p.key == "EXTERNAL_MCP_URL"), None
+        )
+        assert external_mcp_param is not None
+        assert external_mcp_param.type == "string"
+        assert external_mcp_param.value == "https://example.com/mcp"

@@ -9,7 +9,7 @@ description = "Implementation of agent_llamaindex"
 readme = "README.md"
 requires-python = ">=3.10, <3.13"
 dependencies = [
-    "datarobot-genai[llamaindex]>=0.1.30",
+    "datarobot-genai[llamaindex]>=0.1.36",
     "datarobot-moderations>=11.2.4",
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

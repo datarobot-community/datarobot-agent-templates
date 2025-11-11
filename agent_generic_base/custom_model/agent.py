@@ -25,7 +25,7 @@ from datarobot_genai.core.agents import (
 from openai.types.chat import CompletionCreateParams
 
 
-class MyAgent(BaseAgent):
+class MyAgent(BaseAgent[None]):
     """MyAgent is a generic base class that can be used for creating a custom agentic flow. This template
     implements the minimum required methods and attributes to function as a DataRobot agent.
     """

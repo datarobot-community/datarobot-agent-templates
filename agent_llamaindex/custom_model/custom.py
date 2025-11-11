@@ -50,6 +50,10 @@ from typing import Any, AsyncGenerator, Iterator, Union
 
 # ruff: noqa: E402
 from agent import MyAgent
+from datarobot.models.genai.agent.auth import (
+    get_authorization_context,
+    set_authorization_context,
+)
 from datarobot_drum import RuntimeParameters
 from datarobot_genai.core.chat import (
     CustomModelChatResponse,
@@ -136,15 +140,30 @@ def chat(
     # access tokens for external services.
     initialize_authorization_context(completion_create_params, **kwargs)
 
+    # Get the authorization context from the main thread to propagate to the worker thread
+    # ContextVars are thread-local, so we need to set it in the worker thread
+    try:
+        auth_context = get_authorization_context()
+    except LookupError:
+        auth_context = {}
+
     # Instantiate the agent, all fields from the completion_create_params are passed to the agent
     # allowing environment variables to be passed during execution
     agent = MyAgent(**completion_create_params)
 
     # Invoke the agent and check if it returns a generator or a tuple
-    result = thread_pool_executor.submit(
-        event_loop.run_until_complete,
-        agent.invoke(completion_create_params=completion_create_params),
-    ).result()
+    # Set the authorization context in the worker thread before invoking the agent
+    def invoke_with_auth_context():  # type: ignore[no-untyped-def]
+        try:
+            set_authorization_context(auth_context)
+        except AttributeError:
+            pass
+
+        return event_loop.run_until_complete(
+            agent.invoke(completion_create_params=completion_create_params)
+        )
+
+    result = thread_pool_executor.submit(invoke_with_auth_context).result()
 
     # Check if the result is a generator (streaming response)
     if isinstance(result, AsyncGenerator):

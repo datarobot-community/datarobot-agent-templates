@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.3.3
+
+- Do not run dev server in autoreload mode when running CLI
+- Streamlined integration of agent with MCP server
+- Langgraph MCP integration
+- Always create the session secret in agent
+
 ## 11.3.2
 
 - Documentations updates.

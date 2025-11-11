@@ -14,7 +14,7 @@
 import os
 import re
 import shutil
-from typing import cast, Final
+from typing import cast, Optional, Any
 
 import datarobot as dr
 import pulumi
@@ -66,9 +66,6 @@ __all__ = [
 agent_nat_application_name: str = "agent_nat"
 agent_nat_asset_name: str = f"[{PROJECT_NAME}] [agent_nat]"
 agent_nat_application_path = project_dir.parent / "agent_nat"
-
-SESSION_SECRET_KEY: Final[str] = "SESSION_SECRET_KEY"
-session_secret_key = os.environ.get(SESSION_SECRET_KEY)
 
 
 def get_custom_model_files(custom_model_folder: str) -> list[tuple[str, str]]:
@@ -128,6 +125,83 @@ def synchronize_pyproject_dependencies():
         if os.path.exists(uv_lock_path):
             docker_context_uv_lock_path = os.path.join(docker_context_folder, "uv.lock")
             shutil.copy2(uv_lock_path, docker_context_uv_lock_path)
+
+
+def maybe_import_from_module(module: str, object_name: str) -> Optional[Any]:
+    """Attempt to import an object from a module.
+
+    Args:
+        module: The module name to import from (can include relative imports like ".module_name")
+        object_name: The name of the object to import from the module
+
+    Returns:
+        The imported object if successful, None otherwise
+    """
+    if not module:
+        return None
+
+    try:
+        import importlib
+
+        # Ensure relative import format
+        module_path = module if module.startswith(".") else f".{module}"
+        imported_module = importlib.import_module(module_path, package=__package__)
+        return getattr(imported_module, object_name, None)
+    except (ImportError, AttributeError):
+        return None
+
+
+def get_mcp_runtime_parameters_from_env() -> list[
+    pulumi_datarobot.CustomModelRuntimeParameterValueArgs
+]:
+    mcp_runtime_parameters: list[
+        pulumi_datarobot.CustomModelRuntimeParameterValueArgs
+    ] = []
+
+    # Add MCP runtime parameters if configured
+    if os.environ.get("MCP_DEPLOYMENT_ID"):
+        mcp_deployment_id = os.environ["MCP_DEPLOYMENT_ID"]
+        mcp_runtime_parameters.append(
+            pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+                key="MCP_DEPLOYMENT_ID",
+                type="string",
+                value=mcp_deployment_id,
+            )
+        )
+        pulumi.info(f"MCP configured with DataRobot MCP Server: {mcp_deployment_id}")
+
+    # Allow external mcp server. Currently, code will use MCP_DEPLOYMENT_ID first and if that is empty
+    # then use the EXTERNAL_MCP_URL
+    if os.environ.get("EXTERNAL_MCP_URL"):
+        external_mcp_url = os.environ["EXTERNAL_MCP_URL"].rstrip("/")
+        mcp_runtime_parameters.append(
+            pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+                key="EXTERNAL_MCP_URL",
+                type="string",
+                value=external_mcp_url,
+            )
+        )
+        pulumi.info(f"MCP configured with external server: {external_mcp_url}")
+
+    return mcp_runtime_parameters
+
+
+def get_mcp_custom_model_runtime_parameters() -> list[
+    pulumi_datarobot.CustomModelRuntimeParameterValueArgs
+]:
+    """
+    Load MCP runtime parameters from the MCP Deployment module if available,
+    otherwise fall back to environment variables.
+    """
+    mcp_module = ""
+
+    mcp_params = maybe_import_from_module(
+        mcp_module, "mcp_custom_model_runtime_parameters"
+    )
+    if mcp_params is not None:
+        return mcp_params
+
+    return get_mcp_runtime_parameters_from_env()
 
 
 synchronize_pyproject_dependencies()
@@ -191,21 +265,6 @@ agent_nat_custom_model_files = get_custom_model_files(
     str(os.path.join(str(agent_nat_application_path), "custom_model"))
 )
 
-pulumi.export("SESSION_SECRET_KEY", session_secret_key)
-session_secret_cred = pulumi_datarobot.ApiTokenCredential(
-    "agent_nat Session Secret Key",
-    args=pulumi_datarobot.ApiTokenCredentialArgs(
-        api_token=str(session_secret_key),
-    ),
-)
-custom_model_credential_runtime_parameters = [
-    pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
-        type="string",
-        key=SESSION_SECRET_KEY,
-        value=session_secret_cred.id.apply(lambda id: str(id)),
-    ),
-]
-
 base_environment_version_id: str | pulumi.Output[str] = (
     agent_nat_execution_environment.version_id
 )
@@ -226,7 +285,7 @@ agent_nat_custom_model = pulumi_datarobot.CustomModel(
     use_case_ids=[use_case.id],
     files=agent_nat_custom_model_files,
     runtime_parameter_values=llm_custom_model_runtime_parameters
-    + custom_model_credential_runtime_parameters,
+    + get_mcp_custom_model_runtime_parameters(),
 )
 
 agent_nat_custom_model_endpoint = agent_nat_custom_model.id.apply(
@@ -343,28 +402,3 @@ agent_nat_app_runtime_parameters = [
         value=agent_nat_agent_deployment_id,
     ),
 ]
-
-# Add MCP runtime parameters if configured
-if os.environ.get("MCP_DEPLOYMENT_ID"):
-    mcp_deployment_id = os.environ["MCP_DEPLOYMENT_ID"]
-    agent_nat_app_runtime_parameters.append(
-        pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs(
-            key="MCP_DEPLOYMENT_ID",
-            type="string",
-            value=mcp_deployment_id,
-        )
-    )
-    pulumi.info(f"MCP configured with DataRobot MCP Server: {mcp_deployment_id}")
-
-# Allow external mcp server.  Currently code will use MCP_DEPLOYMENT_ID first and if that is empty
-# then use the EXTERNAL_MCP_URL
-if os.environ.get("EXTERNAL_MCP_URL"):
-    external_mcp_url = os.environ["EXTERNAL_MCP_URL"].rstrip("/")
-    agent_nat_app_runtime_parameters.append(
-        pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs(
-            key="EXTERNAL_MCP_URL",
-            type="string",
-            value=external_mcp_url,
-        )
-    )
-    pulumi.info(f"MCP configured with external server: {external_mcp_url}")
