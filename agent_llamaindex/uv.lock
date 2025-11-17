@@ -101,9 +101,9 @@ requires-dist = [
     { name = "click", specifier = ">=8.1.8" },
     { name = "datarobot", extras = ["core"], specifier = ">=3.9.1" },
     { name = "datarobot-drum", specifier = ">=1.17.5" },
-    { name = "datarobot-genai", extras = ["llamaindex"], specifier = ">=0.1.22" },
+    { name = "datarobot-genai", extras = ["llamaindex"], specifier = ">=0.1.3,<0.1.48" },
     { name = "datarobot-mlops", specifier = ">=11.1.0" },
-    { name = "datarobot-moderations", specifier = ">=11.2.3" },
+    { name = "datarobot-moderations", specifier = ">=11.2.4" },
     { name = "datarobot-predict", specifier = ">=1.13.2" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "ecs-logging", specifier = ">=2.2.0" },
@@ -1141,7 +1141,7 @@ wheels = [
 
 [[package]]
 name = "datarobot-moderations"
-version = "11.2.3"
+version = "11.2.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1171,7 +1171,7 @@ dependencies = [
     { name = "trafaret" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d0/31/1f05b9b5b2465ec0e4fa7881a2a3b9cf6e808f4ee3531c74e38c6df6fa9d/datarobot_moderations-11.2.3-py3-none-any.whl", hash = "sha256:2cbf89fb5f882c9b94be45da7abfe3ff05f634663dead7b60efa8e0be2475259", size = 65995, upload-time = "2025-09-08T17:23:00.297Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/46/4835d57305b056a784d451e95a59c3622eeae8776b2fac64e57baaa146b9/datarobot_moderations-11.2.5-py3-none-any.whl", hash = "sha256:4fccc2c382df0d7eebebf3995e4564a76da5afedd3e97c3aa65a49cc88a46d10", size = 68545, upload-time = "2025-11-12T20:36:13.378Z" },
 ]
 
 [[package]]

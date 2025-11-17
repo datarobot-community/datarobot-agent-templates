@@ -176,6 +176,34 @@ Specify which of the four available templates you would like to use during the `
 | `agent_llamaindex`   | Llama-Index | RAG-focused framework                          |
 | `agent_nat`          | NeMo Agent Toolkit | NVIDIA NeMo Agent Toolkit framework     |
 
+<details>
+<summary><b>Which template should I choose?</b></summary>
+
+  While all templates can use DataRobot tools and the DataRobot LLM Gateway, the ideal scenario for each can vary.
+
+  **CrewAI**: A simple way to think about the CrewAI template is that it focuses on 'Who'.
+  It is best suited to solving problems that require roles and collaboration, and excels at quickly prototyping multi-agent teams of specialists to collaborate on creative or analytical tasks.
+
+  **LangGraph**: The LangGraph template focuses on 'How', and is ideal for problems that can be solved with process and auditing.
+  It excels at building reliable systems where you need granular control, and can build incredibly robust systems with error handling and human approval loops.
+  LangGraph's process control makes it ideal for workflows that require human approval before calling DataRobot prediction tools, or for building robust error handling around Data Registry operations.
+
+  **LlamaIndex**: LlamaIndex focuses on the 'What', and is best suited to solving problems that require data and expertise.
+  It excels at building powerful RAG-based agents that are experts in a specific, document-heavy domain.
+  It can be combined with DataRobot's Vector Database for semantic search, Aryn DocParse for document processing, and Search Data Registry for discovering relevant datasets.
+
+  **Generic base**: The Generic base template is a clean slate for situations where you need a barebones foundation that you can fully customize.
+  Select this template if you already have experience developing and modifying agentic workflows, or if you need to build a custom agentic workflow from scratch.
+  Generic base provides maximum flexibility for integrating custom DataRobot [agentic tools](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-tools.html) or building workflows that don't fit standard patterns.
+
+</details>
+
+<!--
+  **NeMo Agent Toolkit**: NeMo Agent Toolkit focuses on 'How well', and is ideal for problems that require optimization, observability, and performance monitoring.
+  It excels at enhancing existing agent workflows with built-in profiling, observability integrations, and evaluation systems without requiring you to replatform.
+  It can be combined with DataRobot tools and observability platforms like Phoenix, Weave, and Langfuse to provide end-to-end visibility into agent performance and costs.
+-->
+
 When prompted to setup the Python environment and install prerequisites, type `y` and press `Enter`.
 
 After selection, setup will finish, leaving only files relevant to the template specified in your branch.
