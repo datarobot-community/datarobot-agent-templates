@@ -23,11 +23,13 @@ logging.getLogger("opentelemetry.instrumentation.instrumentor").setLevel(logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
+from opentelemetry.instrumentation.threading import ThreadingInstrumentor
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
+instrument_threading = ThreadingInstrumentor().instrument()
 instrument_requests = RequestsInstrumentor().instrument()
 instrument_aiohttp = AioHttpClientInstrumentor().instrument()
 instrument_httpx = HTTPXClientInstrumentor().instrument()

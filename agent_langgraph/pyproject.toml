@@ -11,7 +11,6 @@ requires-python = ">=3.10, <3.13"
 dependencies = [
     "datarobot-genai[langgraph]>=0.1.36,<0.1.48",
     "datarobot-moderations>=11.2.4",
-
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # THESE ARE UNIVERSALLY USED AGENT PACKAGES
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -30,7 +29,6 @@ dependencies = [
     "opentelemetry-instrumentation-openai>=0.40.5",
     "opentelemetry-instrumentation-requests>=0.54b0",
     "opentelemetry-sdk>=1.33.0",
-
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # THE FOLLOWING DEPENDENCIES MAY BE REQUIRED FOR IPYTHON KERNEL AND DEPLOYMENT STABILITY
     # WE NEED TO CAREFULLY FIGURE OUT HOW TO UPGRADE AND MOVE THESE IF WE WANT TO REMOVE THEM
@@ -66,6 +64,7 @@ dependencies = [
     "uwsgi>=2.0.30",
     "pylance<=0.38.1",
     "pypdf>=6.1.3",
+    "opentelemetry-instrumentation-threading>=0.59b0",
 ]
 
 [project.optional-dependencies]

@@ -25,6 +25,11 @@ tasks:
     cmds:
       - echo "Updating local dependencies for infra"
       - uv sync --extra dev --quiet
+  install-pulumi-plugin:
+    silent: true
+    # desc: "⬇️ Install DataRobot Pulumi plugins"
+    cmds:
+      - uv run pulumi plugin install resource datarobot v0.10.22 --server https://github.com/datarobot-community/pulumi-datarobot/releases/download/v0.10.22/
   lint:
     silent: true
     # desc: "🧹 Run linters"
@@ -63,6 +68,7 @@ tasks:
     silent: true
     # desc: "Generic pulumi execution command with env variables"
     cmds:
+      - task: install-pulumi-plugin
       - uv run pulumi {{.CLI_ARGS}}
   select:
     silent: true
@@ -81,6 +87,7 @@ tasks:
     # desc: "ℹ️ Show Pulumi stack info"
     cmds:
       - task: select-env-stack
+      - task: install-pulumi-plugin
       - uv run pulumi stack {{.PULUMI_STACK_COMMAND}}
   build:
     desc: "🔵 Deploy only playground testing resources with pulumi"
@@ -89,6 +96,7 @@ tasks:
     cmds:
       - echo "[infra] Running pulumi up with [BUILD] mode"
       - task: select-env-stack
+      - task: install-pulumi-plugin
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   deploy:
@@ -98,6 +106,7 @@ tasks:
     cmds:
       - echo "Running pulumi up with [DEPLOY] mode"
       - task: select-env-stack
+      - task: install-pulumi-plugin
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   refresh:
@@ -105,6 +114,7 @@ tasks:
     cmds:
       - echo "Running pulumi refresh"
       - task: select-env-stack
+      - task: install-pulumi-plugin
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi refresh {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   destroy:
@@ -112,5 +122,6 @@ tasks:
     cmds:
       - echo "Running pulumi destroy"
       - task: select-env-stack
+      - task: install-pulumi-plugin
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi destroy {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
