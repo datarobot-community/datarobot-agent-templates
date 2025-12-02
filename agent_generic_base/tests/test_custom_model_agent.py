@@ -125,7 +125,7 @@ class TestMyAgentBase:
 
         # Assert - Additional kwargs should be accepted but not stored as attributes
         assert agent.api_key is None  # Should fallback to env var or None
-        assert agent.api_base == "https://app.datarobot.com"  # Default value
+        assert agent.api_base is None  # Should fallback to env var or None
         assert agent.model is None
         assert agent.verbose is True
 
@@ -134,7 +134,7 @@ class TestMyAgentBase:
             _ = agent.extra_param1
 
     @patch("builtins.print")
-    async def test_run_method_with_json_input(self, mock_print, agent):
+    def test_run_method_with_json_input(self, mock_print, agent):
         # Create a mock result with a raw attribute
         completion_create_params = {
             "model": "test-model",
@@ -143,38 +143,36 @@ class TestMyAgentBase:
             ],
             "environment_var": True,
         }
-        assert await agent.invoke(completion_create_params) == (
+        assert agent.run(completion_create_params) == (
             "success",
-            None,
             {"completion_tokens": 0, "prompt_tokens": 0, "total_tokens": 0},
         )
 
         # Assert that print was called with "Has inputs"
         mock_print.assert_called_with(
-            "Running agent with user prompt:",
+            "Running agent with inputs:",
             {"topic": "Artificial Intelligence"},
             flush=True,
         )
 
     @patch("builtins.print")
-    async def test_run_method_with_string_input(self, mock_print, agent):
+    def test_run_method_with_string_input(self, mock_print, agent):
         # Create a mock result with a raw attribute
         completion_create_params = {
             "model": "test-model",
             "messages": [{"role": "user", "content": "Artificial Intelligence"}],
             "environment_var": True,
         }
-        result = await agent.invoke(completion_create_params)
+        result = agent.run(completion_create_params)
         assert result == (
             "success",
-            None,
             {"completion_tokens": 0, "prompt_tokens": 0, "total_tokens": 0},
         )
 
         # Assert that print was called with "Has inputs"
         mock_print.assert_called_with(
-            "Running agent with user prompt:",
-            "Artificial Intelligence",
+            "Running agent with inputs:",
+            {"topic": "Artificial Intelligence"},
             flush=True,
         )
 
@@ -183,7 +181,7 @@ class TestMyAgentBase:
         [
             ("https://example.com/api/v2/", "https://example.com/"),
             ("https://example.com/api/v2", "https://example.com/"),
-            ("https://example.com/other-path", "https://example.com/other-path/"),
+            ("https://example.com/other-path", "https://example.com/other-path"),
             (
                 "https://custom.example.com:8080/path/to/api/v2/",
                 "https://custom.example.com:8080/path/to/",
@@ -194,7 +192,7 @@ class TestMyAgentBase:
             ),
             (
                 "https://example.com/api/v2/deployment",
-                "https://example.com/api/v2/deployment/",
+                "https://example.com/api/v2/deployment",
             ),
             (
                 "https://example.com/api/v2/genai/llmgw/chat/completions",
@@ -202,14 +200,14 @@ class TestMyAgentBase:
             ),
             (
                 "https://example.com/api/v2/genai/llmgw/chat/completions/",
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
+                "https://example.com/api/v2/genai/llmgw/chat/completions/",
             ),
-            (None, "https://app.datarobot.com/"),
+            (None, "https://api.datarobot.com"),
         ],
     )
-    def test_litellm_api_base_variations(self, api_base, expected_result):
-        """Test litellm_api_base with various URL formats."""
+    def test_api_base_litellm_variations(self, api_base, expected_result):
+        """Test api_base_litellm property with various URL formats."""
         with patch.dict(os.environ, {}, clear=True):
             agent = MyAgent(api_base=api_base)
-            result = agent.litellm_api_base(None)
+            result = agent.api_base_litellm
             assert result == expected_result

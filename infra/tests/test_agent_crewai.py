@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from unittest.mock import patch, MagicMock, PropertyMock
 
+
 # Ensure the test directory is in sys.path for proper imports
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -31,21 +32,9 @@ def pulumi_mocks(monkeypatch):
     monkeypatch.setattr("infra.use_case", mock_use_case)
     monkeypatch.setattr("infra.project_dir", mock_project_dir)
 
-    # Mock out the LLM and just expose the runtime parameters as it is the only public
-    # interface required for this module.
-    mock_llm_module = MagicMock()
-    mock_llm_module.custom_model_runtime_parameters = []
-    monkeypatch.setitem(sys.modules, "infra.llm", mock_llm_module)
-    # Mock out the MCP Server and just expose the runtime parameters as it is the only public
-    # interface required for this module.
-    mock_mcp_module = MagicMock()
-    mock_mcp_module.mcp_custom_model_runtime_parameters = []
-    monkeypatch.setitem(sys.modules, "infra.mcp", mock_mcp_module)
     # Mock pulumi_datarobot resources
     monkeypatch.setattr("pulumi_datarobot.ExecutionEnvironment", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.CustomModel", MagicMock())
-    monkeypatch.setattr("pulumi_datarobot.ApiTokenCredential", MagicMock())
-    monkeypatch.setattr("pulumi_datarobot.ApiTokenCredentialArgs", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.Playground", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.LlmBlueprint", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.PredictionEnvironment", MagicMock())
@@ -124,10 +113,13 @@ def test_execution_environment_not_set_and_docker_context(monkeypatch):
     agent_infra.pulumi_datarobot.ExecutionEnvironment.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.call_args
 
-    assert kwargs["resource_name"] == "[unittest] [agent_crewai] Execution Environment"
+    assert (
+        kwargs["resource_name"]
+        == "Execution Environment [docker_context] [agent_crewai]"
+    )
     assert kwargs["programming_language"] == "python"
-    assert kwargs["name"] == "[unittest] [agent_crewai] Execution Environment"
-    assert kwargs["description"] == "Execution Environment for [unittest] [agent_crewai]"  # fmt: skip
+    assert kwargs["name"] == "[unittest] agent_crewai"
+    assert kwargs["description"] == "Execution Environment for [unittest] agent_crewai"  # fmt: skip
     assert "docker_context_path" in kwargs
     assert "docker_image" not in kwargs
     assert kwargs["use_cases"] == ["customModel", "notebook"]
@@ -165,10 +157,13 @@ def test_execution_environment_not_set_with_docker_image(monkeypatch):
     agent_infra.pulumi_datarobot.ExecutionEnvironment.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.call_args
 
-    assert kwargs["resource_name"] == "[unittest] [agent_crewai] Execution Environment"
+    assert (
+        kwargs["resource_name"]
+        == "Execution Environment [docker_context] [agent_crewai]"
+    )
     assert kwargs["programming_language"] == "python"
-    assert kwargs["name"] == "[unittest] [agent_crewai] Execution Environment"
-    assert kwargs["description"] == "Execution Environment for [unittest] [agent_crewai]"  # fmt: skip
+    assert kwargs["name"] == "[unittest] agent_crewai"
+    assert kwargs["description"] == "Execution Environment for [unittest] agent_crewai"  # fmt: skip
     assert "docker_image" in kwargs
     assert "docker_context_path" not in kwargs
     assert kwargs["use_cases"] == ["customModel", "notebook"]
@@ -199,7 +194,9 @@ def test_execution_environment_default_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "python-311-genai-agents-id"
-    assert kwargs["resource_name"] == "[unittest] [agent_crewai] Execution Environment"
+    assert (
+        kwargs["resource_name"] == "Execution Environment [PRE-EXISTING] [agent_crewai]"
+    )
 
     # ExecutionEnvironment constructor should not be called when using default env
     agent_infra.pulumi_datarobot.ExecutionEnvironment.assert_not_called()
@@ -226,7 +223,9 @@ def test_execution_environment_custom_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "Custom Execution Environment"
-    assert kwargs["resource_name"] == "[unittest] [agent_crewai] Execution Environment"
+    assert (
+        kwargs["resource_name"] == "Execution Environment [PRE-EXISTING] [agent_crewai]"
+    )
 
     # ExecutionEnvironment constructor should not be called when using custom env
     agent_infra.pulumi_datarobot.ExecutionEnvironment.assert_not_called()
@@ -256,17 +255,12 @@ def test_custom_model_created(monkeypatch):
 
     # Reset the mock to clear calls from the initial import
     agent_infra.pulumi_datarobot.CustomModel.reset_mock()
-
-    environment_variables = {
-        "SESSION_SECRET_KEY": "secret_value",
-    }
-    with patch.dict(os.environ, environment_variables):
-        importlib.reload(agent_infra)
+    importlib.reload(agent_infra)
 
     agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
-    assert kwargs["resource_name"] == "[unittest] [agent_crewai] Custom Model"
-    assert kwargs["name"] == "[unittest] [agent_crewai] Custom Model"
+    assert kwargs["resource_name"].startswith("Custom Model")
+    assert kwargs["name"] == "[unittest] agent_crewai"
     assert kwargs["base_environment_id"] == agent_infra.agent_crewai_execution_environment.id  # fmt: skip
     assert (
         kwargs["base_environment_version_id"]
@@ -277,30 +271,42 @@ def test_custom_model_created(monkeypatch):
     assert kwargs["language"] == "python"
     assert kwargs["use_case_ids"] == [agent_infra.use_case.id]
     assert isinstance(kwargs["files"], list)
+    assert kwargs["runtime_parameter_values"] == []
 
 
-def test_custom_model_created_pinned_version_id(monkeypatch):
-    """Test that pulumi_datarobot.CustomModel is created with correct arguments."""
+def test_custom_model_created_llm_deployment_id(monkeypatch):
+    """Test that pulumi_datarobot.CustomModel is created with correct arguments when llm deployment id is set."""
     monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
-    monkeypatch.setenv(
-        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", "690cd2f698419673f938f7c4"
-    )
+    monkeypatch.setenv("LLM_DATAROBOT_DEPLOYMENT_ID", "model_id")
 
     import importlib
     import infra.agent_crewai as agent_infra
 
     # Reset the mock to clear calls from the initial import
     agent_infra.pulumi_datarobot.CustomModel.reset_mock()
-
-    environment_variables = {
-        "SESSION_SECRET_KEY": "secret_value",
-    }
-    with patch.dict(os.environ, environment_variables):
-        importlib.reload(agent_infra)
+    importlib.reload(agent_infra)
 
     agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
-    assert kwargs["base_environment_version_id"] == "690cd2f698419673f938f7c4"
+    assert kwargs["resource_name"].startswith("Custom Model")
+    assert kwargs["name"] == "[unittest] agent_crewai"
+    assert kwargs["base_environment_id"] == agent_infra.agent_crewai_execution_environment.id  # fmt: skip
+    assert (
+        kwargs["base_environment_version_id"]
+        == agent_infra.agent_crewai_execution_environment.version_id
+    )
+    assert kwargs["target_type"] == "AgenticWorkflow"
+    assert kwargs["target_name"] == "response"
+    assert kwargs["language"] == "python"
+    assert kwargs["use_case_ids"] == [agent_infra.use_case.id]
+    assert isinstance(kwargs["files"], list)
+    assert kwargs["runtime_parameter_values"] == [
+        agent_infra.pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+            key="LLM_DATAROBOT_DEPLOYMENT_ID",
+            type="string",
+            value="model_id",
+        ),
+    ]
 
 
 def test_agentic_playground_and_blueprint_created(monkeypatch):
@@ -321,16 +327,16 @@ def test_agentic_playground_and_blueprint_created(monkeypatch):
     # Check that Agentic Playground was created
     agent_infra.pulumi_datarobot.Playground.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.Playground.call_args
-    assert kwargs["resource_name"] == "[unittest] [agent_crewai] Agentic Playground"
-    assert kwargs["name"] == "[unittest] [agent_crewai] Agentic Playground"
+    assert kwargs["resource_name"].startswith("Agentic Playground")
+    assert kwargs["name"] == "[unittest] agent_crewai"
     assert kwargs["use_case_id"] == agent_infra.use_case.id
     assert kwargs["playground_type"] == "agentic"
 
     # Check that LlmBlueprint was created and points to the created custom model
     agent_infra.pulumi_datarobot.LlmBlueprint.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.LlmBlueprint.call_args
-    assert kwargs["resource_name"] == "[unittest] [agent_crewai] LLM Blueprint"
-    assert kwargs["name"] == "[unittest] [agent_crewai] LLM Blueprint"
+    assert kwargs["resource_name"].startswith("LLM Blueprint")
+    assert kwargs["name"] == "[unittest] agent_crewai"
     assert kwargs["llm_id"] == "chat-interface-custom-model"
     assert kwargs["prompt_type"] == "ONE_TIME_PROMPT"
     assert kwargs[
@@ -338,10 +344,6 @@ def test_agentic_playground_and_blueprint_created(monkeypatch):
     ] == agent_infra.pulumi_datarobot.LlmBlueprintLlmSettingsArgs(
         custom_model_id=agent_infra.agent_crewai_custom_model.id
     )
-
-    # Check that we export agent Playground URL from pulumi
-    export_names = [call.args[0] for call in agent_infra.pulumi.export.call_args_list]
-    assert "Agent Playground URL " + agent_infra.agent_crewai_asset_name in export_names  # fmt: skip
 
     # Check the format of the URL
     agent_infra.pulumi.Output.format.assert_any_call(
@@ -372,10 +374,6 @@ def test_agent_deployment_created_when_env(monkeypatch):
     agent_infra.pulumi_datarobot.PredictionEnvironment.assert_called_once()
     # Check that CustomModelDeployment was created
     agent_infra.CustomModelDeployment.assert_called_once()
-    agent_infra.pulumi.export.assert_any_call(
-        "Agent Deployment Chat Endpoint " + agent_infra.agent_crewai_asset_name,
-        agent_infra.CustomModelDeployment.return_value.id.apply.return_value,
-    )
 
 
 def test_agent_deployment_not_created_when_env_zero(monkeypatch):
@@ -437,226 +435,3 @@ class TestGetCustomModelFiles:
         files = agent_infra.get_custom_model_files(str(tmp_path))
         file_names = [f[1] for f in files]
         assert "real.py" in file_names
-
-
-class TestSynchronizePyprojectDependencies:
-    def test_synchronize_pyproject_dependencies_basic(self, tmp_path, monkeypatch):
-        import infra.agent_crewai as agent_infra
-
-        # Mock the application path to point to our tmp_path
-        monkeypatch.setattr(agent_infra, "agent_crewai_application_path", tmp_path)
-
-        # Create pyproject.toml in the application path
-        pyproject_content = """[project]
-name = "test-project"
-dependencies = ["requests>=2.0"]
-"""
-        (tmp_path / "pyproject.toml").write_text(pyproject_content)
-        (tmp_path / "uv.lock").write_text("test content")
-
-        # Create custom_model and docker_context directories
-        (tmp_path / "custom_model").mkdir()
-        (tmp_path / "docker_context").mkdir()
-
-        # Call the function
-        agent_infra.synchronize_pyproject_dependencies()
-
-        # Check that pyproject.toml was copied to both directories
-        assert (tmp_path / "custom_model" / "pyproject.toml").exists()
-        assert (tmp_path / "docker_context" / "pyproject.toml").exists()
-        assert (tmp_path / "custom_model" / "uv.lock").exists()
-        assert (tmp_path / "docker_context" / "uv.lock").exists()
-
-        # Verify the content is the same
-        assert (
-            tmp_path / "custom_model" / "pyproject.toml"
-        ).read_text() == pyproject_content
-        assert (
-            tmp_path / "docker_context" / "pyproject.toml"
-        ).read_text() == pyproject_content
-        assert (tmp_path / "custom_model" / "uv.lock").read_text() == "test content"
-        assert (tmp_path / "docker_context" / "uv.lock").read_text() == "test content"
-
-    def test_synchronize_pyproject_dependencies_no_pyproject(
-        self, tmp_path, monkeypatch
-    ):
-        import infra.agent_crewai as agent_infra
-
-        # Mock the application path to point to our tmp_path
-        monkeypatch.setattr(agent_infra, "agent_crewai_application_path", tmp_path)
-
-        # Create custom_model and docker_context directories but no pyproject.toml
-        (tmp_path / "custom_model").mkdir()
-        (tmp_path / "docker_context").mkdir()
-
-        # Call the function - should return early without error
-        agent_infra.synchronize_pyproject_dependencies()
-
-        # Check that no pyproject.toml files were created
-        assert not (tmp_path / "custom_model" / "pyproject.toml").exists()
-        assert not (tmp_path / "docker_context" / "pyproject.toml").exists()
-
-    def test_synchronize_pyproject_dependencies_missing_custom_model_dir(
-        self, tmp_path, monkeypatch
-    ):
-        import infra.agent_crewai as agent_infra
-
-        # Mock the application path to point to our tmp_path
-        monkeypatch.setattr(agent_infra, "agent_crewai_application_path", tmp_path)
-
-        # Create pyproject.toml and docker_context directory but not custom_model
-        pyproject_content = """[project]
-name = "test-project"
-"""
-        (tmp_path / "pyproject.toml").write_text(pyproject_content)
-        (tmp_path / "docker_context").mkdir()
-
-        # Call the function
-        agent_infra.synchronize_pyproject_dependencies()
-
-        # Check that pyproject.toml was only copied to docker_context
-        assert not (tmp_path / "custom_model").exists()
-        assert (tmp_path / "docker_context" / "pyproject.toml").exists()
-        assert (
-            tmp_path / "docker_context" / "pyproject.toml"
-        ).read_text() == pyproject_content
-
-    def test_synchronize_pyproject_dependencies_missing_docker_context_dir(
-        self, tmp_path, monkeypatch
-    ):
-        import infra.agent_crewai as agent_infra
-
-        # Mock the application path to point to our tmp_path
-        monkeypatch.setattr(agent_infra, "agent_crewai_application_path", tmp_path)
-
-        # Create pyproject.toml and custom_model directory but not docker_context
-        pyproject_content = """[project]
-name = "test-project"
-"""
-        (tmp_path / "pyproject.toml").write_text(pyproject_content)
-        (tmp_path / "custom_model").mkdir()
-
-        # Call the function
-        agent_infra.synchronize_pyproject_dependencies()
-
-        # Check that pyproject.toml was only copied to custom_model
-        assert (tmp_path / "custom_model" / "pyproject.toml").exists()
-        assert not (tmp_path / "docker_context").exists()
-        assert (
-            tmp_path / "custom_model" / "pyproject.toml"
-        ).read_text() == pyproject_content
-
-    def test_synchronize_pyproject_dependencies_overwrites_existing(
-        self, tmp_path, monkeypatch
-    ):
-        import infra.agent_crewai as agent_infra
-
-        # Mock the application path to point to our tmp_path
-        monkeypatch.setattr(agent_infra, "agent_crewai_application_path", tmp_path)
-
-        # Create pyproject.toml in the application path
-        new_content = """[project]
-name = "updated-project"
-dependencies = ["requests>=3.0"]
-"""
-        (tmp_path / "pyproject.toml").write_text(new_content)
-
-        # Create directories with existing pyproject.toml files
-        (tmp_path / "custom_model").mkdir()
-        (tmp_path / "docker_context").mkdir()
-
-        old_content = """[project]
-name = "old-project"
-"""
-        (tmp_path / "custom_model" / "pyproject.toml").write_text(old_content)
-        (tmp_path / "docker_context" / "pyproject.toml").write_text(old_content)
-
-        # Call the function
-        agent_infra.synchronize_pyproject_dependencies()
-
-        # Check that the old files were overwritten with new content
-        assert (tmp_path / "custom_model" / "pyproject.toml").read_text() == new_content
-        assert (
-            tmp_path / "docker_context" / "pyproject.toml"
-        ).read_text() == new_content
-
-
-class TestMaybeImportFromModule:
-    def test_maybe_import_from_module_success(self):
-        """Test that maybe_import_from_module successfully imports an existing module."""
-        import infra.agent_crewai as agent_infra
-
-        # The fixture sets up the mocked MCP module with mcp_custom_model_runtime_parameters
-        result = agent_infra.maybe_import_from_module(
-            "mcp", "mcp_custom_model_runtime_parameters"
-        )
-        assert result is not None
-
-    def test_maybe_import_from_module_missing_module(self, monkeypatch):
-        """Test that maybe_import_from_module returns None when module is not available."""
-        import infra.agent_crewai as agent_infra
-
-        # Mock importlib.import_module to raise ImportError
-        def mock_import_module(name, package=None):
-            raise ImportError(f"No module named '{name}'")
-
-        monkeypatch.setattr("importlib.import_module", mock_import_module)
-
-        # Attempt to import from the non-existent module
-        result = agent_infra.maybe_import_from_module(
-            "mcp", "mcp_custom_model_runtime_parameters"
-        )
-        assert result is None
-
-    def test_maybe_import_from_module_empty_module_name(self):
-        """Test that maybe_import_from_module returns None with empty module name."""
-        import infra.agent_crewai as agent_infra
-
-        result = agent_infra.maybe_import_from_module("", "some_attribute")
-        assert result is None
-
-
-class TestGetMcpCustomModelRuntimeParameters:
-    def test_get_mcp_custom_model_runtime_parameters_from_module(self):
-        """Test that MCP runtime parameters are loaded from the module when available."""
-        import infra.agent_crewai as agent_infra
-
-        result = agent_infra.get_mcp_custom_model_runtime_parameters()
-        # The fixture sets up a mock module with empty list
-        assert isinstance(result, list)
-
-    def test_get_mcp_custom_model_runtime_parameters_fallback_to_env(self, monkeypatch):
-        """Test that MCP runtime parameters fall back to environment variables when module is unavailable."""
-        import infra.agent_crewai as agent_infra
-
-        # Set up environment variables
-        monkeypatch.setenv("MCP_DEPLOYMENT_ID", "test-deployment-123")
-        monkeypatch.setenv("EXTERNAL_MCP_URL", "https://example.com/mcp")
-
-        # Mock importlib.import_module to raise ImportError
-        def mock_import_module(name, package=None):
-            raise ImportError(f"No module named '{name}'")
-
-        monkeypatch.setattr("importlib.import_module", mock_import_module)
-
-        # Get runtime parameters - should fall back to environment variables
-        result = agent_infra.get_mcp_custom_model_runtime_parameters()
-
-        assert isinstance(result, list)
-        assert len(result) == 2
-
-        # Check MCP_DEPLOYMENT_ID parameter
-        mcp_deployment_param = next(
-            (p for p in result if p.key == "MCP_DEPLOYMENT_ID"), None
-        )
-        assert mcp_deployment_param is not None
-        assert mcp_deployment_param.type == "string"
-        assert mcp_deployment_param.value == "test-deployment-123"
-
-        # Check EXTERNAL_MCP_URL parameter
-        external_mcp_param = next(
-            (p for p in result if p.key == "EXTERNAL_MCP_URL"), None
-        )
-        assert external_mcp_param is not None
-        assert external_mcp_param.type == "string"
-        assert external_mcp_param.value == "https://example.com/mcp"

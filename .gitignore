@@ -98,10 +98,7 @@ profile_default/
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
-/uv.lock
-/infra/uv.lock
-/tests/uv.lock
-
+# uv.lock
 
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
@@ -132,15 +129,13 @@ celerybeat.pid
 
 # Environments
 .env*
-!.env.template
+!.env.sample
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
-# Don't ignore template env file
-!.env.template
 
 # Spyder project settings
 .spyderproject
@@ -178,24 +173,3 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-# Agents files
-*execute_output.json
-/agent_crewai/custom_model/pyproject.toml
-/agent_crewai/custom_model/uv.lock
-/agent_crewai/docker_context
-/agent_generic_base/custom_model/pyproject.toml
-/agent_generic_base/custom_model/uv.lock
-/agent_generic_base/docker_context
-/agent_langgraph/custom_model/pyproject.toml
-/agent_langgraph/custom_model/uv.lock
-/agent_langgraph/docker_context
-/agent_llamaindex/custom_model/pyproject.toml
-/agent_llamaindex/custom_model/uv.lock
-/agent_llamaindex/docker_context
-/agent_nat/custom_model/pyproject.toml
-/agent_nat/custom_model/uv.lock
-/agent_nat/docker_context
-
-# Pulumi
-/pulumi_config.json

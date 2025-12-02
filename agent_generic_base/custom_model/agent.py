@@ -11,21 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import re
 from typing import Any, Optional, Union
 
-from config import Config
-from datarobot_genai.core.agents import (
-    BaseAgent,
-    InvokeReturn,
-    UsageMetrics,
-    default_usage_metrics,
-    extract_user_prompt_content,
-    is_streaming,
-)
+from helpers import create_inputs_from_completion_params
 from openai.types.chat import CompletionCreateParams
 
 
-class MyAgent(BaseAgent[None]):
+class MyAgent:
     """MyAgent is a generic base class that can be used for creating a custom agentic flow. This template
     implements the minimum required methods and attributes to function as a DataRobot agent.
     """
@@ -58,78 +52,64 @@ class MyAgent(BaseAgent[None]):
         Returns:
             None
         """
-        super().__init__(
-            api_key=api_key,
-            api_base=api_base,
-            model=model,
-            verbose=verbose,
-            timeout=timeout,
-            **kwargs,
-        )
-        self.config = Config()
+        self.api_key = api_key or os.environ.get("DATAROBOT_API_TOKEN")
+        self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
         self.model = model
+        self.timeout = timeout
+        if isinstance(verbose, str):
+            self.verbose = verbose.lower() == "true"
+        elif isinstance(verbose, bool):
+            self.verbose = verbose
 
-    async def invoke(
+    @property
+    def api_base_litellm(self) -> str:
+        """Returns a modified version of the API base URL suitable for LiteLLM.
+
+        Strips 'api/v2/' or 'api/v2' from the end of the URL if present.
+
+        Returns:
+            str: The modified API base URL.
+        """
+        if self.api_base:
+            return re.sub(r"api/v2/?$", "", self.api_base)
+        return "https://api.datarobot.com"
+
+    def run(
         self, completion_create_params: CompletionCreateParams
-    ) -> InvokeReturn:
+    ) -> tuple[str, dict[str, int]]:
         """Run the agent with the provided completion parameters.
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
 
+        Inputs can be extracted from the completion_create_params in several ways. A helper function
+        `create_inputs_from_completion_params` is provided to extract the inputs as json or a string
+        from the 'user' portion of the input prompt. Alternatively you can extract and use one or
+        more inputs or messages from the completion_create_params["messages"] field.
+
         Args:
-            completion_create_params: The completion request parameters including input topic and settings.
+            completion_create_params (CompletionCreateParams): The parameters for
+                the completion request, which includes the input topic and other settings.
         Returns:
-            Union[
-                AsyncGenerator[tuple[str, Any | None, dict[str, int]], None],
-                tuple[str, Any | None, dict[str, int]],
-            ]: For streaming requests, returns a generator yielding tuples of (response_text, pipeline_interactions, usage_metrics).
-               For non-streaming requests, returns a single tuple of (response_text, pipeline_interactions, usage_metrics).
+            tuple[list[Any], dict[str, int]]: A tuple containing a list of messages (events) and the agent output.
+
         """
-        # Retrieve the starting user prompt from the CompletionCreateParams
-        user_prompt_content = extract_user_prompt_content(completion_create_params)
+
+        # Example helper for extracting inputs as a json from the completion_create_params["messages"]
+        # field with the 'user' role: (e.g. {"topic": "Artificial Intelligence"})
+        inputs = create_inputs_from_completion_params(completion_create_params)
+
+        # If inputs are a string, convert to a dictionary with 'topic' key for this example.
+        if isinstance(inputs, str):
+            inputs = {"topic": inputs}
 
         # Print commands may need flush=True to ensure they are displayed in real-time.
-        print("Running agent with user prompt:", user_prompt_content, flush=True)
+        print("Running agent with inputs:", inputs, flush=True)
 
-        usage_metrics: UsageMetrics = default_usage_metrics()
+        # Here you would implement the logic of your agent using the inputs.
 
-        # The following code demonstrate both a synchronous and streaming response.
-        # You can choose one or the other based on your use case, they function the same.
-        # The main difference is returning a generator for streaming or a final response for sync.
-        if is_streaming(completion_create_params):
-            # Streaming response: yield each message as it is generated
-            async def stream_generator() -> InvokeReturn:
-                # -----------------------------------------------------------
-                # Here you would implement the streaming logic of your agent using the inputs.
-                # -----------------------------------------------------------
-                yield "streaming success", None, usage_metrics
-
-                # Create a list of events from the event listener
-                events: list[
-                    Any
-                ] = []  # This should be populated with the agent's events/messages
-
-                pipeline_interactions = self.create_pipeline_interactions_from_events(
-                    events
-                )
-
-                # Final response after streaming is complete
-                yield "", pipeline_interactions, usage_metrics
-
-            return stream_generator()
-        else:
-            # -----------------------------------------------------------
-            # Here you would implement the logic of your agent using the inputs.
-            # -----------------------------------------------------------
-            response_text = "success"
-
-            # Create a list of events from the event listener
-            events: list[
-                Any
-            ] = []  # This should be populated with the agent's events/messages
-
-            pipeline_interactions = self.create_pipeline_interactions_from_events(
-                events
-            )
-
-            return response_text, pipeline_interactions, usage_metrics
+        usage = {
+            "completion_tokens": 0,
+            "prompt_tokens": 0,
+            "total_tokens": 0,
+        }
+        return "success", usage

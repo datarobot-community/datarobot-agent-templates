@@ -125,7 +125,7 @@ class TestMyAgentLlamaIndex:
 
         # Assert - Additional kwargs should be accepted but not stored as attributes
         assert agent.api_key is None  # Should fallback to env var or None
-        assert agent.api_base == "https://app.datarobot.com"  # Default value
+        assert agent.api_base is None  # Should fallback to env var or None
         assert agent.model is None
         assert agent.verbose is True
 
@@ -136,11 +136,9 @@ class TestMyAgentLlamaIndex:
     @pytest.mark.parametrize(
         "api_base,expected_result",
         [
-            ("https://example.com", "https://example.com/"),
-            ("https://example.com/", "https://example.com/"),
-            ("https://example.com/api/v2", "https://example.com/"),
             ("https://example.com/api/v2/", "https://example.com/"),
-            ("https://example.com/other-path", "https://example.com/other-path/"),
+            ("https://example.com/api/v2", "https://example.com/"),
+            ("https://example.com/other-path", "https://example.com/other-path"),
             (
                 "https://custom.example.com:8080/path/to/api/v2/",
                 "https://custom.example.com:8080/path/to/",
@@ -151,7 +149,7 @@ class TestMyAgentLlamaIndex:
             ),
             (
                 "https://example.com/api/v2/deployment",
-                "https://example.com/api/v2/deployment/",
+                "https://example.com/api/v2/deployment",
             ),
             (
                 "https://example.com/api/v2/genai/llmgw/chat/completions",
@@ -159,90 +157,14 @@ class TestMyAgentLlamaIndex:
             ),
             (
                 "https://example.com/api/v2/genai/llmgw/chat/completions/",
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
+                "https://example.com/api/v2/genai/llmgw/chat/completions/",
             ),
-            (None, "https://app.datarobot.com/"),
+            (None, "https://api.datarobot.com"),
         ],
     )
-    @patch("agent.DataRobotLiteLLM")
-    def test_llm_gateway_with_api_base(self, mock_llm, api_base, expected_result):
+    def test_api_base_litellm_variations(self, api_base, expected_result):
         """Test api_base_litellm property with various URL formats."""
         with patch.dict(os.environ, {}, clear=True):
             agent = MyAgent(api_base=api_base)
-            agent.config.use_datarobot_llm_gateway = True
-            # We're using the LLM Gateway, it should use the preferred_model
-            _ = agent.llm(preferred_model="datarobot/azure/gpt-4o-mini")
-            mock_llm.assert_called_once_with(
-                model="datarobot/azure/gpt-4o-mini",
-                api_base=expected_result,
-                api_key=None,
-                timeout=90,
-            )
-
-    @pytest.mark.parametrize(
-        "api_base,expected_result",
-        [
-            (
-                "https://example.com",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2/",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/other-path",
-                "https://example.com/other-path/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://custom.example.com:8080/path/to",
-                "https://custom.example.com:8080/path/to/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://custom.example.com:8080/path/to/api/v2/",
-                "https://custom.example.com:8080/path/to/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2/deployments/",
-                "https://example.com/api/v2/deployments/",
-            ),
-            (
-                "https://example.com/api/v2/deployments",
-                "https://example.com/api/v2/deployments/",
-            ),
-            (
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2/genai/llmgw/chat/completions/",
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
-            ),
-            (
-                None,
-                "https://app.datarobot.com/api/v2/deployments/test-id/chat/completions",
-            ),
-        ],
-    )
-    @patch("agent.DataRobotLiteLLM")
-    def test_llm_deployment_with_api_base(self, mock_llm, api_base, expected_result):
-        """Test api_base_litellm property with various URL formats."""
-        with patch.dict(os.environ, {"LLM_DEPLOYMENT_ID": "test-id"}, clear=True):
-            agent = MyAgent(api_base=api_base)
-            # We have a deployment, it should override the preferred_model
-            _ = agent.llm(preferred_model="datarobot/azure/gpt-4o-mini")
-
-            mock_llm.assert_called_once_with(
-                model="datarobot/azure/gpt-4o-mini",
-                api_base=expected_result,
-                api_key=None,
-                timeout=90,
-            )
+            result = agent.api_base_litellm
+            assert result == expected_result

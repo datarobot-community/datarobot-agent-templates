@@ -184,5 +184,3 @@ cython_debug/
 .vscode-workspace/
 
 Pulumi.*.yaml
-# Currently we do not customize the translations, so we can ignore this directory
-.chainlit/translations

@@ -3,21 +3,6 @@ name: agent_llamaindex
 type: inference
 targetType: agenticworkflow
 runtimeParameterDefinitions:
-  - fieldName: LLM_DEPLOYMENT_ID
-    defaultValue: SET_VIA_PULUMI_OR_MANUALLY
-    type: string
-  - fieldName: LLM_DEFAULT_MODEL
-    defaultValue: SET_VIA_PULUMI_OR_MANUALLY
-    type: string
-  - fieldName: LLM_DEFAULT_MODEL_FRIENDLY_NAME
-    defaultValue: SET_VIA_PULUMI_OR_MANUALLY
-    type: string
-  - fieldName: USE_DATAROBOT_LLM_GATEWAY
-    defaultValue: SET_VIA_PULUMI_OR_MANUALLY
-    type: string
-  - fieldName: MCP_DEPLOYMENT_ID
-    defaultValue: SET_VIA_PULUMI_OR_MANUALLY
-    type: string
-  - fieldName: EXTERNAL_MCP_URL
+  - fieldName: LLM_DATAROBOT_DEPLOYMENT_ID
     defaultValue: SET_VIA_PULUMI_OR_MANUALLY
     type: string

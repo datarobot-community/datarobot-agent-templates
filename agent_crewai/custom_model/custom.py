@@ -11,64 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
-# THIS SECTION OF CODE IS REQUIRED TO SETUP TRACING AND TELEMETRY FOR THE AGENTS.
-# REMOVING THIS CODE WILL DISABLE ALL MONITORING, TRACING AND TELEMETRY.
 # isort: off
-import logging
-
-# Suppress the "Attempting to instrument while already instrumented" warning
-logging.getLogger("opentelemetry.instrumentation.instrumentor").setLevel(logging.ERROR)
-
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-from opentelemetry.instrumentation.threading import ThreadingInstrumentor
-from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.openai import OpenAIInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
-
-instrument_threading = ThreadingInstrumentor().instrument()
-instrument_requests = RequestsInstrumentor().instrument()
-instrument_aiohttp = AioHttpClientInstrumentor().instrument()
-instrument_httpx = HTTPXClientInstrumentor().instrument()
-instrument_openai = OpenAIInstrumentor().instrument()
-
-
-from opentelemetry.instrumentation.crewai import CrewAIInstrumentor
-
-instrument_crewai = CrewAIInstrumentor().instrument()
+from helpers_telemetry import *  # noqa # pylint: disable=unused-import
 import os
 
-# Some libraries collect telemetry data by default. Let's disable that.os.environ["CREWAI_TESTING"] = "true"
+# Some libraries collect telemetry data by default. Let's disable that.
 os.environ["RAGAS_DO_NOT_TRACK"] = "true"
 os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
 # isort: on
-# ------------------------------------------------------------------------------
 
-
-from typing import Any, AsyncGenerator, Iterator, Union
-
-# ruff: noqa: E402
 from agent import MyAgent
-from datarobot.models.genai.agent.auth import (
-    get_authorization_context,
-    set_authorization_context,
-)
+from auth import initialize_authorization_context
 from datarobot_drum import RuntimeParameters
-from datarobot_genai.core.chat import (
+from helpers import (
     CustomModelChatResponse,
-    CustomModelStreamingResponse,
-    initialize_authorization_context,
-    to_custom_model_chat_response,
-    to_custom_model_streaming_response,
+    to_custom_model_response,
 )
 from openai.types.chat import CompletionCreateParams
-from openai.types.chat.completion_create_params import (
-    CompletionCreateParamsNonStreaming,
-    CompletionCreateParamsStreaming,
-)
 
 
 def maybe_set_env_from_runtime_parameters(key: str) -> None:
@@ -91,21 +50,16 @@ def maybe_set_env_from_runtime_parameters(key: str) -> None:
         pass
 
 
-def load_model(code_dir: str) -> tuple[ThreadPoolExecutor, asyncio.AbstractEventLoop]:
+def load_model(code_dir: str) -> str:
     """The agent is instantiated in this function and returned."""
-    thread_pool_executor = ThreadPoolExecutor(1)
-    event_loop = asyncio.new_event_loop()
-    thread_pool_executor.submit(asyncio.set_event_loop, event_loop).result()
-    return (thread_pool_executor, event_loop)
+    _ = code_dir
+    return "success"
 
 
 def chat(
-    completion_create_params: CompletionCreateParams
-    | CompletionCreateParamsNonStreaming
-    | CompletionCreateParamsStreaming,
-    load_model_result: tuple[ThreadPoolExecutor, asyncio.AbstractEventLoop],
-    **kwargs: Any,
-) -> Union[CustomModelChatResponse, Iterator[CustomModelStreamingResponse]]:
+    completion_create_params: CompletionCreateParams,
+    model: str,
+) -> CustomModelChatResponse:
     """When using the chat endpoint, this function is called.
 
     Agent inputs are in OpenAI message format and defined as the 'user' portion
@@ -127,62 +81,21 @@ def chat(
             ...
         )
     """
-    thread_pool_executor, event_loop = load_model_result
-
-    # Change working directory to the directory containing this file.
-    # Some agent frameworks expect this for expected pathing.
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-    # Load MCP runtime parameters and session secret if configured
-    maybe_set_env_from_runtime_parameters("EXTERNAL_MCP_URL")
-    maybe_set_env_from_runtime_parameters("MCP_DEPLOYMENT_ID")
-    maybe_set_env_from_runtime_parameters("SESSION_SECRET_KEY")
+    _ = model
 
     # Initialize the authorization context for downstream agents and tools to retrieve
     # access tokens for external services.
-    initialize_authorization_context(completion_create_params, **kwargs)
+    initialize_authorization_context(completion_create_params)
 
-    # Get the authorization context from the main thread to propagate to the worker thread
-    # ContextVars are thread-local, so we need to set it in the worker thread
-    try:
-        auth_context = get_authorization_context()
-    except LookupError:
-        auth_context = {}
+    maybe_set_env_from_runtime_parameters("LLM_DATAROBOT_DEPLOYMENT_ID")
 
     # Instantiate the agent, all fields from the completion_create_params are passed to the agent
     # allowing environment variables to be passed during execution
     agent = MyAgent(**completion_create_params)
 
-    # Invoke the agent and check if it returns a generator or a tuple
-    # Set the authorization context in the worker thread before invoking the agent
-    def invoke_with_auth_context():  # type: ignore[no-untyped-def]
-        try:
-            set_authorization_context(auth_context)
-        except AttributeError:
-            pass
+    # Execute the agent with the inputs
+    agent_result = agent.run(completion_create_params=completion_create_params)
 
-        return event_loop.run_until_complete(
-            agent.invoke(completion_create_params=completion_create_params)
-        )
-
-    result = thread_pool_executor.submit(invoke_with_auth_context).result()
-
-    # Check if the result is a generator (streaming response)
-    if isinstance(result, AsyncGenerator):
-        # Streaming response
-        return to_custom_model_streaming_response(
-            thread_pool_executor,
-            event_loop,
-            result,
-            model=completion_create_params.get("model"),
-        )
-    else:
-        # Non-streaming response
-        response_text, pipeline_interactions, usage_metrics = result
-
-        return to_custom_model_chat_response(
-            response_text,
-            pipeline_interactions,
-            usage_metrics,
-            model=completion_create_params.get("model"),
-        )
+    return to_custom_model_response(
+        *agent_result, model=completion_create_params["model"]
+    )

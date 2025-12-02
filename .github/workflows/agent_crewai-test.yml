@@ -16,6 +16,16 @@ defaults:
   run:
     working-directory: agent_crewai
 jobs:
+  docker-build-test:
+    name: "Agent: agent_crewai Docker build and test"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: "actions/checkout@v4"
+      - name: Build Docker Image
+        run: |
+          cd docker_context
+          tar -czh . | docker build - -t agent_crewai
   tests:
     name: "Agent: agent_crewai ${{ matrix.python-version }}"
     runs-on: "ubuntu-latest"
@@ -23,7 +33,7 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
     steps:
-      - uses: "actions/checkout@v5"
+      - uses: "actions/checkout@v4"
       # Ref: https://docs.astral.sh/uv/guides/integration/github/#installation
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
@@ -33,7 +43,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
         run: |
-          uv sync --extra dev
+          uv sync --all-extras --dev
       - name: Run Static Checks
         run: |
           uv run ruff format --check .

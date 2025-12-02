@@ -17,7 +17,6 @@ from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
 from agent import MyAgent
-from ragas import MultiTurnSample
 from ragas.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
 
 
@@ -128,7 +127,7 @@ class TestMyAgentCrewAI:
 
         # Assert - Additional kwargs should be accepted but not stored as attributes
         assert agent.api_key is None  # Should fallback to env var or None
-        assert agent.api_base == "https://app.datarobot.com"  # Default value
+        assert agent.api_base is None  # Should fallback to env var or None
         assert agent.model is None
         assert agent.verbose is True
 
@@ -139,11 +138,9 @@ class TestMyAgentCrewAI:
     @pytest.mark.parametrize(
         "api_base,expected_result",
         [
-            ("https://example.com", "https://example.com/"),
-            ("https://example.com/", "https://example.com/"),
-            ("https://example.com/api/v2", "https://example.com/"),
             ("https://example.com/api/v2/", "https://example.com/"),
-            ("https://example.com/other-path", "https://example.com/other-path/"),
+            ("https://example.com/api/v2", "https://example.com/"),
+            ("https://example.com/other-path", "https://example.com/other-path"),
             (
                 "https://custom.example.com:8080/path/to/api/v2/",
                 "https://custom.example.com:8080/path/to/",
@@ -154,7 +151,7 @@ class TestMyAgentCrewAI:
             ),
             (
                 "https://example.com/api/v2/deployment",
-                "https://example.com/api/v2/deployment/",
+                "https://example.com/api/v2/deployment",
             ),
             (
                 "https://example.com/api/v2/genai/llmgw/chat/completions",
@@ -162,111 +159,38 @@ class TestMyAgentCrewAI:
             ),
             (
                 "https://example.com/api/v2/genai/llmgw/chat/completions/",
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
+                "https://example.com/api/v2/genai/llmgw/chat/completions/",
             ),
-            (None, "https://app.datarobot.com/"),
+            (None, "https://api.datarobot.com"),
         ],
     )
-    @patch("datarobot_genai.crewai.agent.LLM")
-    def test_llm_gateway_with_api_base(self, mock_llm, api_base, expected_result):
+    def test_api_base_litellm_variations(self, api_base, expected_result):
         """Test api_base_litellm property with various URL formats."""
         with patch.dict(os.environ, {}, clear=True):
             agent = MyAgent(api_base=api_base)
-            _ = agent.llm(preferred_model="datarobot/azure/gpt-4o-mini")
-            mock_llm.assert_called_once_with(
-                model="datarobot/azure/gpt-4o-mini",
-                api_base=expected_result,
-                api_key=None,
-                timeout=90,
-            )
+            result = agent.api_base_litellm
+            assert result == expected_result
 
-    @pytest.mark.parametrize(
-        "api_base,expected_result",
-        [
-            (
-                "https://example.com",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2/",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2",
-                "https://example.com/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/other-path",
-                "https://example.com/other-path/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://custom.example.com:8080/path/to",
-                "https://custom.example.com:8080/path/to/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://custom.example.com:8080/path/to/api/v2/",
-                "https://custom.example.com:8080/path/to/api/v2/deployments/test-id/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2/deployments/",
-                "https://example.com/api/v2/deployments/",
-            ),
-            (
-                "https://example.com/api/v2/deployments",
-                "https://example.com/api/v2/deployments/",
-            ),
-            (
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
-            ),
-            (
-                "https://example.com/api/v2/genai/llmgw/chat/completions/",
-                "https://example.com/api/v2/genai/llmgw/chat/completions",
-            ),
-            (
-                None,
-                "https://app.datarobot.com/api/v2/deployments/test-id/chat/completions",
-            ),
-        ],
-    )
-    @patch("datarobot_genai.crewai.agent.LLM")
-    def test_llm_deployment_with_api_base(self, mock_llm, api_base, expected_result):
-        """Test api_base_litellm property with various URL formats."""
-        with patch.dict(os.environ, {"LLM_DEPLOYMENT_ID": "test-id"}, clear=True):
-            agent = MyAgent(api_base=api_base)
-            agent.config.llm_default_model = "datarobot/azure/gpt-4o-mini"
-            _ = agent.llm(preferred_model="datarobot/azure/gpt-4o-mini")
-            mock_llm.assert_called_once_with(
-                model="datarobot/azure/gpt-4o-mini",
-                api_base=expected_result,
-                api_key=None,
-                timeout=90,
-            )
-
-    @patch("datarobot_genai.crewai.agent.LLM")
-    def test_llm(self, mock_llm, agent):
+    @patch("agent.LLM")
+    def test_llm_property(self, mock_llm, agent):
         # Test that LLM is created with correct parameters
-        agent.llm()
+        agent.llm_with_datarobot_llm_gateway
         mock_llm.assert_called_once_with(
             model="datarobot/azure/gpt-4o-mini",
-            api_base="test_base/",
+            api_base="test_base",
             api_key="test_key",
             timeout=90,
         )
 
-    @patch("datarobot_genai.crewai.agent.LLM")
+    @patch("agent.LLM")
     def test_llm_property_with_no_api_base(self, mock_llm, agent):
         # Test that LLM is created with correct parameters
         with patch.dict(os.environ, {}, clear=True):
             agent = MyAgent(api_key="test_key", verbose=True)
-            agent.llm()
+            agent.llm_with_datarobot_llm_gateway
             mock_llm.assert_called_once_with(
                 model="datarobot/azure/gpt-4o-mini",
-                api_base="https://app.datarobot.com/",
+                api_base="https://api.datarobot.com",
                 api_key="test_key",
                 timeout=90,
             )
@@ -275,39 +199,43 @@ class TestMyAgentCrewAI:
     def test_agent_planner_property(self, mock_agent, agent):
         # Mock the llm property
         mock_llm = Mock()
-        with patch.object(MyAgent, "llm", return_value=mock_llm):
+        with patch.object(
+            MyAgent, "llm_with_datarobot_llm_gateway", return_value=mock_llm
+        ):
             agent.agent_planner
             mock_agent.assert_called_once_with(
-                role="Planner",
+                role="Content Planner",
                 goal=ANY,
                 backstory=ANY,
                 allow_delegation=False,
                 verbose=True,
                 llm=ANY,
-                tools=ANY,
             )
 
     @patch("agent.Agent")
     def test_agent_writer_property(self, mock_agent, agent):
         # Mock the llm property
         mock_llm = Mock()
-        with patch.object(MyAgent, "llm", return_value=mock_llm):
+        with patch.object(
+            MyAgent, "llm_with_datarobot_llm_gateway", return_value=mock_llm
+        ):
             agent.agent_writer
             mock_agent.assert_called_once_with(
-                role="Writer",
+                role="Content Writer",
                 goal=ANY,
                 backstory=ANY,
                 allow_delegation=False,
                 verbose=True,
                 llm=ANY,
-                tools=ANY,
             )
 
     @patch("agent.Agent")
     def test_agent_editor_property(self, mock_agent, agent):
         # Mock the llm property
         mock_llm = Mock()
-        with patch.object(MyAgent, "llm", return_value=mock_llm):
+        with patch.object(
+            MyAgent, "llm_with_datarobot_llm_gateway", return_value=mock_llm
+        ):
             agent.agent_editor
             mock_agent.assert_called_once_with(
                 role="Editor",
@@ -316,7 +244,6 @@ class TestMyAgentCrewAI:
                 allow_delegation=False,
                 verbose=True,
                 llm=ANY,
-                tools=ANY,
             )
 
     @patch("agent.Task")
@@ -355,16 +282,48 @@ class TestMyAgentCrewAI:
                 agent=ANY,
             )
 
-    @patch("datarobot_genai.crewai.base.Crew")
-    @patch("agent.CrewAIEventListener")
-    @patch("agent.Agent")
-    def test_chat(
-        self, mock_agent, mock_event_listener, mock_crew, agent, load_model_result
-    ):
-        # This test case covers testing that the agent invoke runs with the llm interactions mocked
-        from custom import chat
+    def test_run_method(self, agent):
+        # Create a mock result with a raw attribute
+        mock_result = Mock()
+        mock_result.raw = "success"
+        mock_result.token_usage = Mock(
+            completion_tokens=10,
+            prompt_tokens=5,
+            total_tokens=15,
+        )
 
-        _ = mock_agent, agent  # Uncalled but left for global test setup
+        # Create a mock crew with a kickoff method that returns the mock result
+        mock_crew = Mock()
+        mock_crew.kickoff.return_value = mock_result
+
+        # Patch the crew method to return our mock
+        with patch.object(MyAgent, "crew", return_value=mock_crew):
+            # Call the run method with test inputs
+            completion_create_params = {
+                "model": "test-model",
+                "messages": [
+                    {"role": "user", "content": '{"topic": "Artificial Intelligence"}'}
+                ],
+                "environment_var": True,
+            }
+            crew_output, events = agent.run(completion_create_params)
+
+            # Verify crew() was called
+            agent.crew.assert_called_once()
+
+            # Verify kickoff was called with the right inputs
+            mock_crew.kickoff.assert_called_once_with(
+                inputs={"topic": "Artificial Intelligence"}
+            )
+
+            assert crew_output == mock_result
+            assert not events
+
+    @patch("custom.MyAgent")
+    def test_chat(self, mock_agent):
+        # This test case covers pipeline interactions in the response.  Test with
+        # no pipeline interactions is already part of test_custom_model.py::test_chat
+        from custom import chat
 
         crew_output = Mock(
             raw="agent result",
@@ -374,8 +333,6 @@ class TestMyAgentCrewAI:
                 total_tokens=3,
             ),
         )
-        mock_crew.return_value = Mock(kickoff=MagicMock(return_value=crew_output))
-
         events = [
             HumanMessage(content="Hi"),
             AIMessage(
@@ -387,215 +344,24 @@ class TestMyAgentCrewAI:
             ToolMessage(content="Use en"),
             AIMessage(content="How are you today?"),
         ]
-        mock_event_listener.return_value = Mock(messages=events)
-        # Ensure the actual agent instance uses our mocked event listener
-        agent.event_listener = mock_event_listener.return_value
 
         # Setup mocks
+        mock_agent_instance = MagicMock()
+        mock_agent_instance.run.return_value = (crew_output, events)
+        mock_agent.return_value = mock_agent_instance
+
         completion_create_params = {
             "model": "test-model",
             "messages": [{"role": "user", "content": '{"topic": "test"}'}],
             "environment_var": True,
         }
 
-        with (
-            patch.object(MyAgent, "task_plan"),
-            patch.object(MyAgent, "task_write"),
-            patch.object(MyAgent, "task_edit"),
-            patch(
-                "datarobot_genai.crewai.agent.create_pipeline_interactions_from_messages",
-                return_value=MultiTurnSample(user_input=events),
-            ),
-        ):
-            response = chat(
-                completion_create_params, load_model_result=load_model_result
-            )
+        response = chat(completion_create_params, model="test-model")
 
         # Assert results - check the pipeline_interactions - other sections of the
         # results are already being checked in test_custom_model.py::test_chat
-        completion = json.loads(response.model_dump_json())
+        completion = json.loads(response.json())
         actual_events = json.loads(completion["pipeline_interactions"])["user_input"]
         for expected_message, actual_message in zip(events, actual_events):
             assert expected_message.content == actual_message["content"]
             assert expected_message.type == actual_message["type"]
-
-
-class TestMyAgentMCPIntegration:
-    """Test MCP tool integration for CrewAI agents."""
-
-    @pytest.fixture
-    def agent(self):
-        return MyAgent(api_key="test_key", api_base="test_base", verbose=True)
-
-    def test_agent_planner_with_mcp_tools(self, agent):
-        """Test that planner agent uses MCP tools when configured."""
-        from crewai.tools import BaseTool
-
-        # Create mock MCP tools
-        class MockTool(BaseTool):
-            name: str = "test_mcp_tool"
-            description: str = "Test MCP tool"
-
-            def _run(self, **kwargs):
-                return "mcp_result"
-
-        mock_tools = [MockTool()]
-
-        # Set MCP tools using the new method
-        agent.set_mcp_tools(mock_tools)
-
-        # Test planner agent
-        planner = agent.agent_planner
-        assert planner.tools == mock_tools
-
-    def test_agent_writer_with_mcp_tools(self, agent):
-        """Test that writer agent uses MCP tools when configured."""
-        from crewai.tools import BaseTool
-
-        # Create mock MCP tools
-        class MockTool(BaseTool):
-            name: str = "test_mcp_tool"
-            description: str = "Test MCP tool"
-
-            def _run(self, **kwargs):
-                return "mcp_result"
-
-        mock_tools = [MockTool()]
-
-        # Set MCP tools using the new method
-        agent.set_mcp_tools(mock_tools)
-
-        # Test writer agent
-        writer = agent.agent_writer
-        assert writer.tools == mock_tools
-
-    def test_agent_editor_with_mcp_tools(self, agent):
-        """Test that editor agent uses MCP tools when configured."""
-        from crewai.tools import BaseTool
-
-        # Create mock MCP tools
-        class MockTool(BaseTool):
-            name: str = "test_mcp_tool"
-            description: str = "Test MCP tool"
-
-            def _run(self, **kwargs):
-                return "mcp_result"
-
-        mock_tools = [MockTool()]
-
-        # Set MCP tools using the new method
-        agent.set_mcp_tools(mock_tools)
-
-        # Test editor agent
-        editor = agent.agent_editor
-        assert editor.tools == mock_tools
-
-    def test_agent_with_no_mcp_tools(self, agent):
-        """Test that agents work when no MCP tools are available."""
-        # Test all agents have no tools by default
-        planner = agent.agent_planner
-        writer = agent.agent_writer
-        editor = agent.agent_editor
-
-        assert planner.tools == []
-        assert writer.tools == []
-        assert editor.tools == []
-
-    def test_agent_with_specific_mcp_tools(self, agent):
-        """Test that agents can use specific MCP tools."""
-        from crewai.tools import BaseTool
-
-        # Create multiple mock MCP tools
-        class Tool1(BaseTool):
-            name: str = "tool1"
-            description: str = "Tool 1"
-
-            def _run(self, **kwargs):
-                return "result1"
-
-        class Tool2(BaseTool):
-            name: str = "tool2"
-            description: str = "Tool 2"
-
-            def _run(self, **kwargs):
-                return "result2"
-
-        mock_tools = [Tool1(), Tool2()]
-
-        # Set MCP tools using the new method
-        agent.set_mcp_tools(mock_tools)
-
-        # Test planner agent with specific tools
-        planner = agent.agent_planner
-        assert len(planner.tools) == 2
-        assert planner.tools == mock_tools
-
-    def test_agent_planner_specific_tool_names(self, agent):
-        """Test that planner agent gets specific tool names."""
-        from crewai.tools import BaseTool
-
-        # Create mock tool for list_tools
-        class ListToolsTool(BaseTool):
-            name: str = "list_tools"
-            description: str = "List available tools"
-
-            def _run(self, **kwargs):
-                return "available_tools"
-
-        mock_tools = [ListToolsTool()]
-
-        # Set MCP tools using the new method
-        agent.set_mcp_tools(mock_tools)
-
-        # Test planner agent
-        planner = agent.agent_planner
-        assert planner.tools == mock_tools
-
-    def test_agent_writer_all_tools(self, agent):
-        """Test that writer agent gets all available tools."""
-        from crewai.tools import BaseTool
-
-        # Create mock tools
-        class Tool1(BaseTool):
-            name: str = "tool1"
-            description: str = "Tool 1"
-
-            def _run(self, **kwargs):
-                return "result1"
-
-        class Tool2(BaseTool):
-            name: str = "tool2"
-            description: str = "Tool 2"
-
-            def _run(self, **kwargs):
-                return "result2"
-
-        mock_tools = [Tool1(), Tool2()]
-
-        # Set MCP tools using the new method
-        agent.set_mcp_tools(mock_tools)
-
-        # Test writer agent
-        writer = agent.agent_writer
-        assert writer.tools == mock_tools
-
-    def test_agent_editor_all_tools(self, agent):
-        """Test that editor agent gets all available tools."""
-        from crewai.tools import BaseTool
-
-        # Create mock tools
-        class Tool1(BaseTool):
-            name: str = "tool1"
-            description: str = "Tool 1"
-
-            def _run(self, **kwargs):
-                return "result1"
-
-        mock_tools = [Tool1()]
-
-        # Set MCP tools using the new method
-        agent.set_mcp_tools(mock_tools)
-
-        # Test editor agent
-        editor = agent.agent_editor
-        assert editor.tools == mock_tools
