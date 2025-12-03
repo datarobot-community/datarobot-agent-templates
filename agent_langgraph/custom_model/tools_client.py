@@ -18,7 +18,7 @@ from typing import Any, Iterator, Optional, Union, cast
 import datarobot as dr
 import openai
 import pandas as pd
-from auth import get_authorization_context
+from datarobot.models.genai.agent.auth import get_authorization_context
 from datarobot_predict.deployment import (
     PredictionResult,
     UnstructuredPredictionResult,
@@ -75,15 +75,6 @@ class ToolClient:
         dr.Client(self.api_key, self.datarobot_api_endpoint)
         return dr.Deployment.get(deployment_id=deployment_id)
 
-    def _get_authorization_context(self) -> dict[str, Any]:
-        """Retrieve the authorization context.
-
-        Returns:
-            dict[str, Any]: The authorization context.
-        """
-        authorization_context = get_authorization_context()
-        return cast(dict[str, Any], authorization_context)
-
     def call(
         self, deployment_id: str, payload: dict[str, Any], **kwargs: Any
     ) -> UnstructuredPredictionResult:
@@ -99,7 +90,7 @@ class ToolClient:
         """
         data = {
             "payload": payload,
-            "authorization_context": self._get_authorization_context(),
+            "authorization_context": get_authorization_context(),
         }
         return predict_unstructured(
             deployment=self.get_deployment(deployment_id),
@@ -142,7 +133,7 @@ class ToolClient:
             Union[ChatCompletion, Iterator[ChatCompletionChunk]]: The chat completion response.
         """
         extra_body = {
-            "authorization_context": self._get_authorization_context(),
+            "authorization_context": get_authorization_context(),
         }
         return openai.chat.completions.create(
             **completion_create_params,

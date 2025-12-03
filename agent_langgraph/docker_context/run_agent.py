@@ -26,6 +26,7 @@ import requests
 from datarobot_drum.drum.enum import TargetType
 from datarobot_drum.drum.root_predictors.drum_inline_utils import drum_inline_predictor
 from datarobot_drum.drum.root_predictors.drum_server_utils import DrumServerRun
+from httpx import Timeout
 from openai import OpenAI
 from openai.types.chat import ChatCompletion
 from openai.types.chat.completion_create_params import (
@@ -250,6 +251,7 @@ def execute_drum(
             api_key="not-required",
             default_headers=default_headers,
             max_retries=0,
+            timeout=Timeout(timeout=1200, connect=5.0),
         )
         completion = client.chat.completions.create(**chat_completion)
 

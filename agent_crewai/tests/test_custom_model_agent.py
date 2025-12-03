@@ -179,6 +179,7 @@ class TestMyAgentCrewAI:
             model="datarobot/azure/gpt-4o-mini",
             api_base="test_base",
             api_key="test_key",
+            timeout=90,
         )
 
     @patch("agent.LLM")
@@ -191,6 +192,7 @@ class TestMyAgentCrewAI:
                 model="datarobot/azure/gpt-4o-mini",
                 api_base="https://api.datarobot.com",
                 api_key="test_key",
+                timeout=90,
             )
 
     @patch("agent.Agent")
@@ -304,7 +306,7 @@ class TestMyAgentCrewAI:
                 ],
                 "environment_var": True,
             }
-            events, crew_output = agent.run(completion_create_params)
+            crew_output, events = agent.run(completion_create_params)
 
             # Verify crew() was called
             agent.crew.assert_called_once()
@@ -345,7 +347,7 @@ class TestMyAgentCrewAI:
 
         # Setup mocks
         mock_agent_instance = MagicMock()
-        mock_agent_instance.run.return_value = (events, crew_output)
+        mock_agent_instance.run.return_value = (crew_output, events)
         mock_agent.return_value = mock_agent_instance
 
         completion_create_params = {

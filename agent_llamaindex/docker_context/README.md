@@ -24,7 +24,7 @@ For specific version information and the complete list of included packages, see
 2. Using either the API or from the UI create a new Custom Environment with the tarball created
 in step 1.
 
-_The Dockerfile.local should be used when customizing the Dockerfile or building locally._
+*The Dockerfile.local should be used when customizing the Dockerfile or building locally.*
 
 ### Creating models for this environment
 

@@ -44,23 +44,23 @@ tasks:
     desc: "🤖 Run base agent API tests"
     cmds:
       - echo "Running base agent tests"
-      - uv run pytest -vv -s -k "test_agent_e2e[agent_generic_base-2]"
+      - uv run pytest -vv -s ./api_tests/test_agents/test_agent_e2e.py::test_e2e_agents[agent_generic_base-2]
     silent: true
   crewai:
     desc: "👥 Run crewai agent API tests"
     cmds:
       - echo "Running crewai agent tests"
-      - uv run pytest -vv -s -k "test_agent_e2e[agent_crewai-1]"
+      - uv run pytest -vv -s ./api_tests/test_agents/test_agent_e2e.py::test_e2e_agents[agent_crewai-1]
     silent: true
   langgraph:
     desc: "🔄 Run langgraph agent API tests"
     cmds:
       - echo "Running langgraph agent tests"
-      - uv run pytest -vv -s -k "test_agent_e2e[agent_langgraph-3]"
+      - uv run pytest -vv -s ./api_tests/test_agents/test_agent_e2e.py::test_e2e_agents[agent_langgraph-3]
     silent: true
   llamaindex:
     desc: "🦙 Run llamaindex agent API tests"
     cmds:
       - echo "Running llamaindex agent tests"
-      - uv run pytest -vv -s -k "test_agent_e2e[agent_llamaindex-4]"
+      - uv run pytest -vv -s ./api_tests/test_agents/test_agent_e2e.py::test_e2e_agents[agent_llamaindex-4]
     silent: true

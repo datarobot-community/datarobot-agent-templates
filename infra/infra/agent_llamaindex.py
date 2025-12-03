@@ -65,6 +65,7 @@ __all__ = [
 
 agent_llamaindex_application_name: str = "agent_llamaindex"
 agent_llamaindex_resource_name: str = "[agent_llamaindex]"
+agent_llamaindex_asset_name: str = f"[{PROJECT_NAME}] agent_llamaindex"
 agent_llamaindex_application_path = project_dir.parent / "agent_llamaindex"
 
 
@@ -119,23 +120,59 @@ if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
             )
         )
 else:
-    agent_llamaindex_execution_environment = pulumi_datarobot.ExecutionEnvironment(
-        resource_name="Execution Environment [docker_context] "
-        + agent_llamaindex_resource_name,
-        programming_language="python",
-        description="Execution Environment [agent docker_context]",
-        docker_context_path=os.path.join(
-            str(agent_llamaindex_application_path), "docker_context"
-        ),
-        use_cases=["customModel", "notebook"],
-    )
+    agent_llamaindex_exec_env_use_cases = ["customModel", "notebook"]
+    if os.path.exists(
+        os.path.join(str(agent_llamaindex_application_path), "docker_context.tar.gz")
+    ):
+        pulumi.info(
+            "Using prebuilt Dockerfile docker_context.tar.gz to run the execution environment"
+        )
+        agent_llamaindex_execution_environment = pulumi_datarobot.ExecutionEnvironment(
+            resource_name="Execution Environment [docker_context] "
+            + agent_llamaindex_resource_name,
+            name=agent_llamaindex_asset_name,
+            description="Execution Environment for " + agent_llamaindex_asset_name,
+            programming_language="python",
+            docker_image=os.path.join(
+                str(agent_llamaindex_application_path), "docker_context.tar.gz"
+            ),
+            use_cases=agent_llamaindex_exec_env_use_cases,
+        )
+    else:
+        pulumi.info("Using docker_context folder to compile the execution environment")
+        agent_llamaindex_execution_environment = pulumi_datarobot.ExecutionEnvironment(
+            resource_name="Execution Environment [docker_context] "
+            + agent_llamaindex_resource_name,
+            name=agent_llamaindex_asset_name,
+            description="Execution Environment for " + agent_llamaindex_asset_name,
+            programming_language="python",
+            docker_context_path=os.path.join(
+                str(agent_llamaindex_application_path), "docker_context"
+            ),
+            use_cases=agent_llamaindex_exec_env_use_cases,
+        )
 
 agent_llamaindex_custom_model_files = get_custom_model_files(
     str(os.path.join(str(agent_llamaindex_application_path), "custom_model"))
 )
 
+agent_llamaindex_runtime_parameters = []
+if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
+    agent_llamaindex_runtime_parameters = [
+        pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+            key="LLM_DATAROBOT_DEPLOYMENT_ID",
+            type="string",
+            value=os.environ["LLM_DATAROBOT_DEPLOYMENT_ID"],
+        ),
+    ]
+elif os.environ.get("USE_DATAROBOT_LLM_GATEWAY") in [0, "0", False, "false", "False"]:
+    from .llm_datarobot import app_runtime_parameters  # type: ignore[import-not-found]
+
+    agent_llamaindex_runtime_parameters = app_runtime_parameters  # type: ignore
+
 agent_llamaindex_custom_model = pulumi_datarobot.CustomModel(
     resource_name="Custom Model " + agent_llamaindex_resource_name,
+    name=agent_llamaindex_asset_name,
     base_environment_id=agent_llamaindex_execution_environment.id,
     base_environment_version_id=agent_llamaindex_execution_environment.version_id,
     target_type="AgenticWorkflow",
@@ -143,19 +180,50 @@ agent_llamaindex_custom_model = pulumi_datarobot.CustomModel(
     language="python",
     use_case_ids=[use_case.id],
     files=agent_llamaindex_custom_model_files,
-    runtime_parameter_values=[],
-    # To use the LLM DataRobot Deployment in your Agent, use the alternative parameter below
-    # runtime_parameter_values=llm_datarobot_app_runtime_parameters,
+    runtime_parameter_values=agent_llamaindex_runtime_parameters,
 )
 
 agent_llamaindex_custom_model_endpoint = agent_llamaindex_custom_model.id.apply(
     lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/genai/agents/fromCustomModel/{id}/chat/"
 )
 
+agent_llamaindex_playground = pulumi_datarobot.Playground(
+    name=agent_llamaindex_asset_name,
+    resource_name="Agentic Playground " + agent_llamaindex_resource_name,
+    description="Experimentation Playground for " + agent_llamaindex_asset_name,
+    use_case_id=use_case.id,
+    playground_type="agentic",
+)
+
+agent_llamaindex_blueprint = pulumi_datarobot.LlmBlueprint(
+    name=agent_llamaindex_asset_name,
+    resource_name="LLM Blueprint " + agent_llamaindex_resource_name,
+    playground_id=agent_llamaindex_playground.id,
+    llm_id="chat-interface-custom-model",
+    llm_settings=pulumi_datarobot.LlmBlueprintLlmSettingsArgs(
+        custom_model_id=agent_llamaindex_custom_model.id
+    ),
+    prompt_type="ONE_TIME_PROMPT",
+)
+
+datarobot_url = (
+    os.getenv("DATAROBOT_ENDPOINT", "https://app.datarobot.com/api/v2")
+    .rstrip("/")
+    .rstrip("/api/v2")
+)
+
+agent_llamaindex_playground_url = pulumi.Output.format(
+    "{0}/usecases/{1}/agentic-playgrounds/{2}/comparison/chats",
+    datarobot_url,
+    use_case.id,
+    agent_llamaindex_playground.id,
+)
+
+
 # Export the IDs of the created resources
-pulumi.export("Agent Use Case ID " + agent_llamaindex_resource_name, use_case.id)
+pulumi.export("Agent Use Case ID " + agent_llamaindex_asset_name, use_case.id)
 pulumi.export(
-    "Agent Execution Environment ID " + agent_llamaindex_resource_name,
+    "Agent Execution Environment ID " + agent_llamaindex_asset_name,
     agent_llamaindex_execution_environment.id,
 )
 pulumi.export(
@@ -163,9 +231,10 @@ pulumi.export(
     agent_llamaindex_custom_model.id,
 )
 pulumi.export(
-    "Agent Custom Model Chat Endpoint " + agent_llamaindex_resource_name,
+    "Agent Custom Model Chat Endpoint " + agent_llamaindex_asset_name,
     agent_llamaindex_custom_model_endpoint,
 )
+pulumi.export("Agent Playground URL " + agent_llamaindex_asset_name, agent_llamaindex_playground_url)  # fmt: skip
 
 
 agent_llamaindex_agent_deployment_id: pulumi.Output[str] = cast(
@@ -174,16 +243,19 @@ agent_llamaindex_agent_deployment_id: pulumi.Output[str] = cast(
 if os.environ.get("AGENT_DEPLOY") != "0":
     agent_llamaindex_prediction_environment = pulumi_datarobot.PredictionEnvironment(
         resource_name="Prediction Environment " + agent_llamaindex_resource_name,
+        name=agent_llamaindex_asset_name,
         platform=dr.enums.PredictionEnvironmentPlatform.DATAROBOT_SERVERLESS,
+        opts=pulumi.ResourceOptions(retain_on_delete=True),
     )
 
     agent_llamaindex_registered_model_args = RegisteredModelArgs(
         resource_name="Registered Model " + agent_llamaindex_resource_name,
+        name=agent_llamaindex_asset_name,
     )
 
     agent_llamaindex_deployment_args = DeploymentArgs(
         resource_name="Deployment " + agent_llamaindex_resource_name,
-        label=f"Deployment [{PROJECT_NAME}] " + agent_llamaindex_resource_name,
+        label=agent_llamaindex_asset_name,
         association_id_settings=pulumi_datarobot.DeploymentAssociationIdSettingsArgs(
             column_names=["association_id"],
             auto_generate_id=False,
@@ -213,15 +285,15 @@ if os.environ.get("AGENT_DEPLOY") != "0":
         lambda id: f"{id}"
     )
     agent_llamaindex_deployment_endpoint = agent_llamaindex_agent_deployment.id.apply(
-        lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/genai/agents/fromCustomModel/{id}/chat/"
+        lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/deployments/{id}/chat/completions"
     )
 
     pulumi.export(
-        "Agent Deployment ID " + agent_llamaindex_resource_name,
+        "Agent Deployment ID " + agent_llamaindex_asset_name,
         agent_llamaindex_agent_deployment.id,
     )
     pulumi.export(
-        "Agent Deployment Chat Endpoint " + agent_llamaindex_resource_name,
+        "Agent Deployment Chat Endpoint " + agent_llamaindex_asset_name,
         agent_llamaindex_deployment_endpoint,
     )
 

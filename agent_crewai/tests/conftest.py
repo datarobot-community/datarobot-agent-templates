@@ -51,14 +51,14 @@ def mock_agent_response(
 
 @pytest.fixture
 def mock_crewai_output():
-    return None, mock.Mock(
+    return mock.Mock(
         raw="agent result",
         token_usage=mock.Mock(
             completion_tokens=1,
             prompt_tokens=2,
             total_tokens=3,
         ),
-    )
+    ), None
 
 
 @pytest.fixture
@@ -103,4 +103,4 @@ def mock_llamaindex_output():
         "prompt_tokens": 2,
         "total_tokens": 3,
     }
-    return "agent result", [], usage
+    return "agent result", usage, None

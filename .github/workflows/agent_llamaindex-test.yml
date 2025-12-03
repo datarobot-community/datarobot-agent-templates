@@ -44,7 +44,6 @@ jobs:
       - name: Install Dependencies
         run: |
           uv sync --all-extras --dev
-          uv pip install -r ./custom_model/requirements.txt
       - name: Run Static Checks
         run: |
           uv run ruff format --check .

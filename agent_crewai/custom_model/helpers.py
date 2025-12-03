@@ -152,8 +152,8 @@ def create_completion_from_response_text(
 
 
 def to_custom_model_response(
-    events: list[Union[HumanMessage, AIMessage, ToolMessage]] | None,
     crew_output: CrewOutput,
+    events: list[Union[HumanMessage, AIMessage, ToolMessage]] | None,
     model: str,
 ) -> CustomModelChatResponse:
     """Convert the CrewAI agent output to a custom model response."""
@@ -164,7 +164,7 @@ def to_custom_model_response(
     }
 
     pipeline_interactions = None
-    if events:
+    if events is not None:
         pipeline_interactions = MultiTurnSample(user_input=events)
     response = create_completion_from_response_text(
         response_text=str(crew_output.raw),

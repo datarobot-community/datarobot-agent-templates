@@ -39,6 +39,7 @@ class MyAgent:
         api_base: Optional[str] = None,
         model: Optional[str] = None,
         verbose: Optional[Union[bool, str]] = True,
+        timeout: Optional[int] = 90,
         **kwargs: Any,
     ):
         """Initializes the MyAgent class with API key, base URL, model, and verbosity settings.
@@ -52,6 +53,8 @@ class MyAgent:
                 Defaults to None.
             verbose: Optional[Union[bool, str]]: Whether to enable verbose logging.
                 Accepts boolean or string values ("true"/"false"). Defaults to True.
+            timeout: Optional[int]: How long to wait for the agent to respond.
+                Defaults to 90 seconds.
             **kwargs: Any: Additional keyword arguments passed to the agent.
                 Contains any parameters received in the CompletionCreateParams.
 
@@ -61,6 +64,7 @@ class MyAgent:
         self.api_key = api_key or os.environ.get("DATAROBOT_API_TOKEN")
         self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
         self.model = model
+        self.timeout = timeout
         if isinstance(verbose, str):
             self.verbose = verbose.lower() == "true"
         elif isinstance(verbose, bool):
@@ -92,6 +96,7 @@ class MyAgent:
             model="datarobot/azure/gpt-4o-mini",
             api_base=self.api_base_litellm,
             api_key=self.api_key,
+            timeout=self.timeout,
         )
 
     @property
@@ -103,12 +108,21 @@ class MyAgent:
         and another for a specific DataRobot deployment, or even multiple deployments or
         third-party LLMs.
         """
-        deployment_url = f"{self.api_base_litellm}/api/v2/deployments/{os.environ.get('LLM_DEPLOYMENT_ID')}/"
+        deployment_url = f"{self.api_base}/deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/"
         return ChatLiteLLM(
-            model="datarobot/azure/gpt-4o-mini",
+            model="openai/gpt-4o-mini",
             api_base=deployment_url,
             api_key=self.api_key,
+            timeout=self.timeout,
         )
+
+    @property
+    def llm(self) -> ChatLiteLLM:
+        """Returns a ChatLiteLLM instance configured to use DataRobot's LLM Gateway or a specific deployment."""
+        if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
+            return self.llm_with_datarobot_deployment
+        else:
+            return self.llm_with_datarobot_llm_gateway
 
     @staticmethod
     def make_system_prompt(suffix: str) -> str:
@@ -123,7 +137,7 @@ class MyAgent:
     @property
     def agent_planner(self) -> CompiledGraph:
         return create_react_agent(
-            self.llm_with_datarobot_llm_gateway,
+            self.llm,
             tools=[],
             prompt=self.make_system_prompt(
                 "You are a content planner. You are working with an content writer and editor colleague."
@@ -154,7 +168,7 @@ class MyAgent:
     @property
     def agent_writer(self) -> CompiledGraph:
         return create_react_agent(
-            self.llm_with_datarobot_llm_gateway,
+            self.llm,
             tools=[],
             prompt=self.make_system_prompt(
                 "You are a content writer. You are working with an planner and editor colleague."
@@ -196,7 +210,7 @@ class MyAgent:
     @property
     def agent_editor(self) -> CompiledGraph:
         return create_react_agent(
-            self.llm_with_datarobot_llm_gateway,
+            self.llm,
             tools=[],
             prompt=self.make_system_prompt(
                 "You are a content editor. You are working with an planner and writer colleague."
@@ -235,7 +249,7 @@ class MyAgent:
         )
 
     def task_write(self, state: MessagesState) -> Command[Any]:
-        result = self.agent_planner.invoke(state)
+        result = self.agent_writer.invoke(state)
         result["messages"][-1] = HumanMessage(
             content=result["messages"][-1].content, name="writer_node"
         )

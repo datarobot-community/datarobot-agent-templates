@@ -21,6 +21,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
+from httpx import Timeout
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import Span
 from pydantic import ValidationError
@@ -582,6 +583,7 @@ class TestExecuteDrum:
             api_key="not-required",
             default_headers={"X-Custom": "value"},
             max_retries=0,
+            timeout=Timeout(timeout=1200, connect=5.0),
         )
 
         # Verify completion creation

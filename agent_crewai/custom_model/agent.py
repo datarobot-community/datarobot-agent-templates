@@ -34,6 +34,7 @@ class MyAgent:
         api_base: Optional[str] = None,
         model: Optional[str] = None,
         verbose: Optional[Union[bool, str]] = True,
+        timeout: Optional[int] = 90,
         **kwargs: Any,
     ):
         """Initializes the MyAgent class with API key, base URL, model, and verbosity settings.
@@ -47,6 +48,8 @@ class MyAgent:
                 Defaults to None.
             verbose: Optional[Union[bool, str]]: Whether to enable verbose logging.
                 Accepts boolean or string values ("true"/"false"). Defaults to True.
+            timeout: Optional[int]: How long to wait for the agent to respond.
+                Defaults to 90 seconds.
             **kwargs: Any: Additional keyword arguments passed to the agent.
                 Contains any parameters received in the CompletionCreateParams.
 
@@ -56,6 +59,7 @@ class MyAgent:
         self.api_key = api_key or os.environ.get("DATAROBOT_API_TOKEN")
         self.api_base = api_base or os.environ.get("DATAROBOT_ENDPOINT")
         self.model = model
+        self.timeout = timeout
         if isinstance(verbose, str):
             self.verbose = verbose.lower() == "true"
         elif isinstance(verbose, bool):
@@ -88,6 +92,7 @@ class MyAgent:
             model="datarobot/azure/gpt-4o-mini",
             api_base=self.api_base_litellm,
             api_key=self.api_key,
+            timeout=self.timeout,
         )
 
     @property
@@ -99,11 +104,21 @@ class MyAgent:
         and another for a specific DataRobot deployment, or even multiple deployments or
         third-party LLMs.
         """
+        deployment_url = f"{self.api_base}/deployments/{os.environ.get('LLM_DATAROBOT_DEPLOYMENT_ID')}/"
         return LLM(
-            model="datarobot/azure/gpt-4o-mini",
-            api_base=f"{self.api_base_litellm}api/v2/deployments/{os.environ.get('LLM_DEPLOYMENT_ID')}/chat/completions",
+            model="openai/gpt-4o-mini",
+            api_base=deployment_url,
             api_key=self.api_key,
+            timeout=self.timeout,
         )
+
+    @property
+    def llm(self) -> LLM:
+        """Returns a CrewAI LLM instance configured to use DataRobot's LLM Gateway or a specific deployment."""
+        if os.environ.get("LLM_DATAROBOT_DEPLOYMENT_ID"):
+            return self.llm_with_datarobot_deployment
+        else:
+            return self.llm_with_datarobot_llm_gateway
 
     @property
     def agent_planner(self) -> Agent:
@@ -119,7 +134,7 @@ class MyAgent:
             "the Content Writer to write an article on this topic.",
             allow_delegation=False,
             verbose=self.verbose,
-            llm=self.llm_with_datarobot_llm_gateway,
+            llm=self.llm,
         )
 
     @property
@@ -144,7 +159,7 @@ class MyAgent:
             "as opposed to objective statements.",
             allow_delegation=False,
             verbose=self.verbose,
-            llm=self.llm_with_datarobot_llm_gateway,
+            llm=self.llm,
         )
 
     @property
@@ -163,7 +178,7 @@ class MyAgent:
             "or opinions when possible.",
             allow_delegation=False,
             verbose=self.verbose,
-            llm=self.llm_with_datarobot_llm_gateway,
+            llm=self.llm,
         )
 
     @property
@@ -227,7 +242,7 @@ class MyAgent:
 
     def run(
         self, completion_create_params: CompletionCreateParams
-    ) -> tuple[list[Any], CrewOutput]:
+    ) -> tuple[CrewOutput, list[Any]]:
         """Run the agent with the provided completion parameters.
 
         [THIS METHOD IS REQUIRED FOR THE AGENT TO WORK WITH DRUM SERVER]
@@ -241,7 +256,7 @@ class MyAgent:
             completion_create_params (CompletionCreateParams): The parameters for
                 the completion request, which includes the input topic and other settings.
         Returns:
-            tuple[list[Any], CrewOutput]: A tuple containing a list of messages (events) and the crew output.
+            tuple[CrewOutput, list[Any]]: A tuple containing a list of messages (events) and the crew output.
 
         """
         # Example helper for extracting inputs as a json from the completion_create_params["messages"]
@@ -262,11 +277,16 @@ class MyAgent:
         response_text = str(crew_output.raw)
 
         # Create a list of events from the event listener
-        events = self.event_listener.messages
+        events: list[Any] = self.event_listener.messages
         if len(events) > 0:
             last_message = events[-1].content
             if last_message != response_text:
                 events.append(AIMessage(content=response_text))
         else:
-            events = None
-        return events, crew_output
+            events = []
+        # The `events` variable is used to compute agentic metrics
+        # (e.g. Task Adherence, Agent Goal Accuracy, Agent Goal Accuracy with Reference,
+        # Tool Call Accuracy).
+        # If you are not interested in these metrics, you can also return None instead.
+        # This will reduce the size of the response significantly.
+        return crew_output, events

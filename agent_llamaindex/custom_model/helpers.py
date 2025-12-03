@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# mypy: disable-error-code="arg-type"
 import json
 import time
 import uuid
@@ -87,13 +88,15 @@ def create_completion_from_response_text(
 
 def to_custom_model_response(
     agent_result: str,
-    events: Sequence[Event],
     usage_metrics: dict[str, int],
+    events: Sequence[Event] | None,
     model: str,
 ) -> CustomModelChatResponse:
     """Convert the LLamaIndex agent output to a custom model response."""
-    ragas_trace = convert_to_ragas_messages(events)
-    pipeline_interactions = MultiTurnSample(user_input=ragas_trace)
+    pipeline_interactions: MultiTurnSample | None = None
+    if events is not None:
+        ragas_trace = convert_to_ragas_messages(events)
+        pipeline_interactions = MultiTurnSample(user_input=ragas_trace)
 
     response = create_completion_from_response_text(
         response_text=agent_result,

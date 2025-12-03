@@ -3,11 +3,6 @@ name: agent_llamaindex
 type: inference
 targetType: agenticworkflow
 runtimeParameterDefinitions:
-  - fieldName: ENABLE_LLM_GATEWAY_INFERENCE
-    defaultValue: true
-    description: Enables consumption based pricing access to LLMs. If set to false, access to LLMs in this custom model will
-      require additional fields.
-    type: boolean
   - fieldName: LLM_DATAROBOT_DEPLOYMENT_ID
     defaultValue: SET_VIA_PULUMI_OR_MANUALLY
     type: string

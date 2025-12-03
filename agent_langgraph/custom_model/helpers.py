@@ -111,6 +111,11 @@ def to_custom_model_response(
     node_name = next(iter(last_event))
     output = str(last_event[node_name]["messages"][-1].content)
 
+    # The `pipeline_interactions` parameter is used to compute agentic metrics
+    # (e.g. Task Adherence, Agent Goal Accuracy, Agent Goal Accuracy with Reference,
+    # Tool Call Accuracy).
+    # If you are not interested in these metrics, you can also pass None instead.
+    # This will reduce the size of the response significantly.
     response = create_completion_from_response_text(
         response_text=output,
         usage_metrics=usage_metrics,

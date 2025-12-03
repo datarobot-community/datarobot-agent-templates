@@ -22,13 +22,32 @@ os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
 
 from agent import MyAgent
 from auth import initialize_authorization_context
-
-# from datarobot_drum import RuntimeParameters
+from datarobot_drum import RuntimeParameters
 from helpers import (
     CustomModelChatResponse,
     to_custom_model_response,
 )
 from openai.types.chat import CompletionCreateParams
+
+
+def maybe_set_env_from_runtime_parameters(key: str) -> None:
+    """
+    Set an environment variable from a runtime parameter if it exists.
+
+    In local development, the runtime parameters are not available, and environment variable
+    is set from the .env file, so it's safe to ignore the exception.
+    """
+    RUNTIME_PARAMETER_PLACEHOLDER_VALUE = "SET_VIA_PULUMI_OR_MANUALLY"
+    try:
+        runtime_parameter_value = RuntimeParameters.get(key)
+        if (
+            runtime_parameter_value
+            and len(runtime_parameter_value) > 0
+            and runtime_parameter_value != RUNTIME_PARAMETER_PLACEHOLDER_VALUE
+        ):
+            os.environ[key] = runtime_parameter_value
+    except ValueError:
+        pass
 
 
 def load_model(code_dir: str) -> str:
@@ -68,15 +87,7 @@ def chat(
     # access tokens for external services.
     initialize_authorization_context(completion_create_params)
 
-    # This is an example of how to set environment variables from RuntimeParameters
-    # These can also be passed to the model. If a DataRobot LLM deployment is used,
-    # the deployment ID can be set as an environment variable and used inside the agent
-    # in the llm_with_datarobot_deployment property.
-
-    # llm_datarobot_deployment_id_from_runtime RuntimeParameters.get(
-    #     "LLM_DATAROBOT_DEPLOYMENT_ID"
-    # )
-    # os.environ["LLM_DATAROBOT_DEPLOYMENT_ID"] = llm_datarobot_deployment_id_from_runtime
+    maybe_set_env_from_runtime_parameters("LLM_DATAROBOT_DEPLOYMENT_ID")
 
     # Instantiate the agent, all fields from the completion_create_params are passed to the agent
     # allowing environment variables to be passed during execution
@@ -85,10 +96,6 @@ def chat(
     # Execute the agent with the inputs
     agent_result = agent.run(completion_create_params=completion_create_params)
 
-    if isinstance(agent_result, tuple):
-        return to_custom_model_response(
-            *agent_result, model=completion_create_params["model"]
-        )
     return to_custom_model_response(
-        agent_result, model=completion_create_params["model"]
+        *agent_result, model=completion_create_params["model"]
     )

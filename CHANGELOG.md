@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.1.1
+
+- Upgrade starlette, llama-index and pin all other libraries
+- Fix downstream formatting errors
+- Deploy an agentic playground and show / export a link
+- Fix agent env setup in notebook
+- Support deployment ID without code modifications
+- Improve naming
+
 ## 0.1.6
 - Update documentation to explain adding packages to the execution environment and custom models.
 - Update moderations-lib to the latest revision.
