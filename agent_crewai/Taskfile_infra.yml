@@ -13,8 +13,8 @@ vars:
       fi
   PULUMI_STACK_COMMAND:
     sh: |
-      if [ -n "${PULUMI_STACK_NAME:-}" ]; then
-        echo "--stack $PULUMI_STACK_NAME"
+      if [ -n "${PULUMI_STACK:-}" ]; then
+        echo "--stack $PULUMI_STACK"
       else
         echo ""
       fi
@@ -79,15 +79,15 @@ tasks:
     silent: true
     cmds:
       - |
-        if [ -n "${PULUMI_STACK_NAME:-}" ]; then
-          {{.CLEAN_PYTHON_ENV}} uv run pulumi stack select -c $PULUMI_STACK_NAME
+        if [ -n "${PULUMI_STACK:-}" ]; then
+          {{.CLEAN_PYTHON_ENV}} uv run pulumi stack select -c $PULUMI_STACK
         fi
   info:
     silent: true
     # desc: "ℹ️ Show Pulumi stack info"
     cmds:
-      - task: select-env-stack
       - task: install-pulumi-plugin
+      - task: select-env-stack
       - uv run pulumi stack {{.PULUMI_STACK_COMMAND}}
   build:
     desc: "🔵 Deploy only playground testing resources with pulumi"
@@ -95,8 +95,8 @@ tasks:
       AGENT_DEPLOY: 0
     cmds:
       - echo "[infra] Running pulumi up with [BUILD] mode"
-      - task: select-env-stack
       - task: install-pulumi-plugin
+      - task: select-env-stack
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   deploy:
@@ -105,23 +105,23 @@ tasks:
       AGENT_DEPLOY: 1
     cmds:
       - echo "Running pulumi up with [DEPLOY] mode"
-      - task: select-env-stack
       - task: install-pulumi-plugin
+      - task: select-env-stack
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   refresh:
     desc: "⚪️ Refresh and sync local pulumi state"
     cmds:
       - echo "Running pulumi refresh"
-      - task: select-env-stack
       - task: install-pulumi-plugin
+      - task: select-env-stack
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi refresh {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true
   destroy:
     desc: "🔴 Teardown all deployed resources with pulumi"
     cmds:
       - echo "Running pulumi destroy"
-      - task: select-env-stack
       - task: install-pulumi-plugin
+      - task: select-env-stack
       - "{{.CLEAN_PYTHON_ENV}} uv run pulumi destroy {{.PULUMI_STACK_COMMAND}} {{.CLI_ARGS}}"
     silent: true

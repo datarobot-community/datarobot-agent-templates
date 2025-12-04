@@ -40,10 +40,11 @@ class DotEnvBuilder:
     ENV_VARIABLES_INFO = {
         "DATAROBOT_API_TOKEN": "Your DataRobot API token.",
         "DATAROBOT_ENDPOINT": "The URL of your DataRobot instance API.",
-        "PULUMI_STACK_NAME": "The Pulumi stack name to use for this project.",
+        "PULUMI_STACK": "The Pulumi stack name to use for this project.",
         "PULUMI_CONFIG_PASSPHRASE": "If empty, a blank passphrase will be used",
         "DATAROBOT_DEFAULT_USE_CASE": "If empty, a new use case will be created",
         "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT": "If empty, a new execution environment will be created for each agent using the docker_context folder",
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID": "This is set to a specific version of `[DataRobot] Python 3.11 GenAI Agents` to preserve compatibility of the templates",
         "USE_DATAROBOT_LLM_GATEWAY": "Whether to use the DataRobot LLM Gateway (true/false)",
         "LLM_DEPLOYMENT_ID": "Your DataRobot LLM Deployment ID (required if not using the LLM Gateway)",
     }
@@ -75,6 +76,9 @@ create a `.env` file by copying the `.env.example` file and filling in the requi
         env_variables["DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT"] = (
             '"[DataRobot] Python 3.11 GenAI Agents"'
         )
+        env_variables[
+            "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID"
+        ] = "690cbff963ff6b122f0f67a1" # Matches .env.template version
 
         # Prompt for API token
         print("""
@@ -107,13 +111,13 @@ create a `.env` file by copying the `.env.example` file and filling in the requi
 > A unique pulumi stack name is used to help you easily identify resources associated
 > with this project in the DataRobot registry and deployments.
         """)
-        while not env_variables["PULUMI_STACK_NAME"]:
+        while not env_variables["PULUMI_STACK"]:
             value = input(
                 "Please enter your Pulumi stack name [default: dev]: "
             ).strip()
             if value == "":
                 value = "dev"
-            env_variables["PULUMI_STACK_NAME"] = value
+            env_variables["PULUMI_STACK"] = value
 
         # Ask if a user wants to use the DataRobot LLM Gateway
         print("""
@@ -167,7 +171,7 @@ create a `.env` file by copying the `.env.example` file and filling in the requi
         """
         Validate that the provided field is valid.
         """
-        if field_name == "PULUMI_STACK_NAME":
+        if field_name == "PULUMI_STACK":
             return bool(value and " " not in value)
         if field_name == "DATAROBOT_API_TOKEN":
             return len(value) == 92

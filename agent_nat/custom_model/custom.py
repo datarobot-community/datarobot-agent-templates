@@ -15,44 +15,24 @@
 # THIS SECTION OF CODE IS REQUIRED TO SETUP TRACING AND TELEMETRY FOR THE AGENTS.
 # REMOVING THIS CODE WILL DISABLE ALL MONITORING, TRACING AND TELEMETRY.
 # isort: off
-import logging
+from datarobot_genai.core.telemetry_agent import instrument
 
-# Suppress the "Attempting to instrument while already instrumented" warning
-logging.getLogger("opentelemetry.instrumentation.instrumentor").setLevel(logging.ERROR)
-
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-from opentelemetry.instrumentation.threading import ThreadingInstrumentor
-from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.openai import OpenAIInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
-
-instrument_threading = ThreadingInstrumentor().instrument()
-instrument_requests = RequestsInstrumentor().instrument()
-instrument_aiohttp = AioHttpClientInstrumentor().instrument()
-instrument_httpx = HTTPXClientInstrumentor().instrument()
-instrument_openai = OpenAIInstrumentor().instrument()
-
-import os
-
-# Some libraries collect telemetry data by default. Let's disable that.
-os.environ["RAGAS_DO_NOT_TRACK"] = "true"
-os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
-# isort: on
-# ------------------------------------------------------------------------------
-
-
-from typing import Any, AsyncGenerator, Iterator, Union
-
+instrument(framework="nat")
 # ruff: noqa: E402
 from agent import MyAgent
+from config import Config
+
+# isort: on
+# ------------------------------------------------------------------------------
+import asyncio
+import os
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, AsyncGenerator, Iterator, Union
+
 from datarobot.models.genai.agent.auth import (
     get_authorization_context,
     set_authorization_context,
 )
-from datarobot_drum import RuntimeParameters
 from datarobot_genai.core.chat import (
     CustomModelChatResponse,
     CustomModelStreamingResponse,
@@ -65,26 +45,6 @@ from openai.types.chat.completion_create_params import (
     CompletionCreateParamsNonStreaming,
     CompletionCreateParamsStreaming,
 )
-
-
-def maybe_set_env_from_runtime_parameters(key: str) -> None:
-    """
-    Set an environment variable from a runtime parameter if it exists.
-
-    In local development, the runtime parameters are not available, and environment variable
-    is set from the .env file, so it's safe to ignore the exception.
-    """
-    RUNTIME_PARAMETER_PLACEHOLDER_VALUE = "SET_VIA_PULUMI_OR_MANUALLY"
-    try:
-        runtime_parameter_value = RuntimeParameters.get(key)
-        if (
-            runtime_parameter_value
-            and len(runtime_parameter_value) > 0
-            and runtime_parameter_value != RUNTIME_PARAMETER_PLACEHOLDER_VALUE
-        ):
-            os.environ[key] = runtime_parameter_value
-    except ValueError:
-        pass
 
 
 def load_model(code_dir: str) -> tuple[ThreadPoolExecutor, asyncio.AbstractEventLoop]:
@@ -130,9 +90,8 @@ def chat(
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     # Load MCP runtime parameters and session secret if configured
-    maybe_set_env_from_runtime_parameters("EXTERNAL_MCP_URL")
-    maybe_set_env_from_runtime_parameters("MCP_DEPLOYMENT_ID")
-    maybe_set_env_from_runtime_parameters("SESSION_SECRET_KEY")
+    # ["EXTERNAL_MCP_URL", "MCP_DEPLOYMENT_ID", "SESSION_SECRET_KEY"]
+    _ = Config()
 
     # Initialize the authorization context for downstream agents and tools to retrieve
     # access tokens for external services.

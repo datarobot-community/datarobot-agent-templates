@@ -21,6 +21,7 @@ import os
 import tempfile
 from collections import namedtuple
 from pathlib import Path
+import logging
 
 import datarobot
 import pulumi
@@ -35,6 +36,8 @@ from datarobot_pulumi_utils.common.feature_flags import (
 )
 
 INFRA_DIR = Path(__file__).parent
+
+log = logging.getLogger(__name__)
 
 
 # LLM Credential Management Mapping
@@ -263,12 +266,8 @@ def verify_llm_gateway_model_availability(model_id: str) -> None:
     dr_client = datarobot.Client()
     response = dr_client.get("genai/llmgw/catalog/")
     data = response.json()
-    non_deprecated_models = "\n.   - ".join(
-        [
-            model["model"]
-            for model in data["data"]
-            if not model["isDeprecated"] and model["isActive"]
-        ]
+    active_models_display = "\n.   - ".join(
+        [model["model"] for model in data["data"] if model["isActive"]]
     )
     matched_models = [
         model
@@ -277,15 +276,20 @@ def verify_llm_gateway_model_availability(model_id: str) -> None:
     ]
     if not matched_models:
         raise ValueError(
-            f"Model '{model_id}' not found in catalog. Available models: {non_deprecated_models}"
+            f"Model '{model_id}' not found in catalog. Available models: {active_models_display}"
         )
-    if not len(matched_models) == 1:
+    if len(matched_models) != 1:
         raise ValueError(
             f"Multiple models found for '{model_id}' in catalog. {matched_models}"
         )
-    if not matched_models[0]["isActive"] or matched_models[0]["isDeprecated"]:
+    if matched_models[0]["isDeprecated"] and matched_models[0]["isActive"]:
+        log.warning(
+            "Model '%s' is deprecated but active. The end of support date falls within 90 days.",
+            model_id,
+        )
+    if not matched_models[0]["isActive"]:
         raise ValueError(
-            f"Model '{model_id}' is not active or is deprecated. Available models: {non_deprecated_models}"
+            f"Model '{model_id}' is not active or is retired. Available models: {active_models_display}"
         )
 
 

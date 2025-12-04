@@ -15,11 +15,11 @@ from typing import Any, List, Optional, Union
 
 from config import Config
 from crewai import LLM, Agent, Task
-from crewai_event_listener import CrewAIEventListener
 from datarobot_genai.crewai.agent import (
     build_llm,
 )
 from datarobot_genai.crewai.base import CrewAIAgent
+from datarobot_genai.crewai.events import CrewAIEventListener
 
 
 class MyAgent(CrewAIAgent):
@@ -126,7 +126,7 @@ class MyAgent(CrewAIAgent):
             allow_delegation=False,
             verbose=self.verbose,
             llm=self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
-            tools=self._mcp_tools,
+            tools=self.mcp_tools,
         )
 
     @property
@@ -144,7 +144,7 @@ class MyAgent(CrewAIAgent):
             allow_delegation=False,
             verbose=self.verbose,
             llm=self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
-            tools=self._mcp_tools,
+            tools=self.mcp_tools,
         )
 
     @property
@@ -160,7 +160,7 @@ class MyAgent(CrewAIAgent):
             allow_delegation=False,
             verbose=self.verbose,
             llm=self.llm(),
-            tools=self._mcp_tools,
+            tools=self.mcp_tools,
         )
 
     @property

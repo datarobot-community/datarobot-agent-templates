@@ -62,7 +62,6 @@ dependencies = [
     { name = "opentelemetry-instrumentation-langchain" },
     { name = "opentelemetry-instrumentation-openai" },
     { name = "opentelemetry-instrumentation-requests" },
-    { name = "opentelemetry-instrumentation-threading" },
     { name = "opentelemetry-sdk" },
     { name = "pandas" },
     { name = "psutil" },
@@ -102,7 +101,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.1.8" },
     { name = "datarobot", extras = ["core"], specifier = ">=3.9.1" },
     { name = "datarobot-drum", specifier = ">=1.17.5" },
-    { name = "datarobot-genai", extras = ["llamaindex"], specifier = ">=0.1.36,<0.1.48" },
+    { name = "datarobot-genai", extras = ["llamaindex"], specifier = ">=0.1.57,<0.2.0" },
     { name = "datarobot-mlops", specifier = ">=11.1.0" },
     { name = "datarobot-moderations", specifier = ">=11.2.4" },
     { name = "datarobot-predict", specifier = ">=1.13.2" },
@@ -133,7 +132,6 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-langchain", specifier = ">=0.40.5" },
     { name = "opentelemetry-instrumentation-openai", specifier = ">=0.40.5" },
     { name = "opentelemetry-instrumentation-requests", specifier = ">=0.54b0" },
-    { name = "opentelemetry-instrumentation-threading", specifier = ">=0.59b0" },
     { name = "opentelemetry-sdk", specifier = ">=1.33.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.2.0" },
@@ -1099,22 +1097,26 @@ wheels = [
 
 [[package]]
 name = "datarobot-genai"
-version = "0.1.47"
+version = "0.1.58"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datarobot" },
     { name = "datarobot-drum" },
     { name = "datarobot-predict" },
     { name = "openai" },
+    { name = "opentelemetry-instrumentation-aiohttp-client" },
+    { name = "opentelemetry-instrumentation-httpx" },
+    { name = "opentelemetry-instrumentation-openai" },
+    { name = "opentelemetry-instrumentation-requests" },
     { name = "pandas" },
     { name = "pyjwt" },
     { name = "pypdf" },
     { name = "ragas" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/81/67b3c5d04a7473e53e012065d2020c3bd222e330fe8ee41db14a0bd94174/datarobot_genai-0.1.47.tar.gz", hash = "sha256:2e1d9d6e2bb5d9cea515ea8b472f93c36a77666b0d08343f51cd0496b71aa42a", size = 98727, upload-time = "2025-11-14T15:40:42.681Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/df/057193f52c86686bd206202561122fdee5c8869e6130502e3b424abd8f8f/datarobot_genai-0.1.58.tar.gz", hash = "sha256:cbabccdaea4d0edac9fb6c62b162c51e90dcefe5b87ee9e530ac137abeb517df", size = 100427, upload-time = "2025-11-19T08:37:29.656Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/b7/c8f7745343d3522683ec3b5edfb330d266c802001017945956be648816b5/datarobot_genai-0.1.47-py3-none-any.whl", hash = "sha256:32a021f2d6e1922e026cc76976d785c05fb292bfa8e82c2465f698d03de6bb33", size = 164227, upload-time = "2025-11-14T15:40:41.514Z" },
+    { url = "https://files.pythonhosted.org/packages/55/35/18fab6978c4e2e133c64f887707080d8f62122f506daae13f66508f0d43a/datarobot_genai-0.1.58-py3-none-any.whl", hash = "sha256:c45c5f3a5b6c45a78561328a4f815b79cb17c2f7ac72f23c8800afbf005d6741", size = 165962, upload-time = "2025-11-19T08:37:28.208Z" },
 ]
 
 [package.optional-dependencies]

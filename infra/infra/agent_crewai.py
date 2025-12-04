@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from pathlib import Path
 import re
 import shutil
-from typing import cast, Optional, Any
+from typing import cast, Final, Optional, Any, Sequence
+import yaml  # type: ignore[import-untyped]
 
 import datarobot as dr
 import pulumi
@@ -27,6 +29,7 @@ from datarobot_pulumi_utils.schema.custom_models import (
     RegisteredModelArgs,
 )
 from datarobot_pulumi_utils.schema.exec_envs import RuntimeEnvironments
+
 
 from . import project_dir, use_case
 
@@ -53,7 +56,6 @@ EXCLUDE_PATTERNS = [
 __all__ = [
     "agent_crewai_application_name",
     "agent_crewai_application_path",
-    "agent_crewai_execution_environment_id",
     "agent_crewai_prediction_environment",
     "agent_crewai_custom_model",
     "agent_crewai_agent_deployment_id",
@@ -68,7 +70,57 @@ agent_crewai_asset_name: str = f"[{PROJECT_NAME}] [agent_crewai]"
 agent_crewai_application_path = project_dir.parent / "agent_crewai"
 
 
-def get_custom_model_files(custom_model_folder: str) -> list[tuple[str, str]]:
+def _generate_metadata_yaml(
+    agent_name: str,
+    custom_model_folder: str,
+    runtime_parameter_values: Sequence[
+        pulumi_datarobot.CustomModelRuntimeParameterValueArgs
+    ],
+) -> None:
+    """Generate model-metadata.yaml file from scratch with runtime parameters.
+
+    Args:
+        agent_name: Name of the agent
+        custom_model_folder: Path to the custom model folder
+        runtime_parameter_values: List of runtime parameter definitions
+
+    Raises:
+        OSError: If unable to write the metadata file
+    """
+    metadata = {
+        "name": agent_name,
+        "type": "inference",
+        "targetType": "agenticworkflow",
+        "runtimeParameterDefinitions": [
+            {"fieldName": param.key, "type": param.type}
+            for param in runtime_parameter_values
+        ]
+        or [],
+    }
+
+    # Write the file using yaml library for proper formatting
+    metadata_output_path = Path(custom_model_folder) / "model-metadata.yaml"
+    metadata_output_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_output_path.write_text(
+        yaml.dump(
+            metadata, default_flow_style=False, sort_keys=False, explicit_start=True
+        ),
+        encoding="utf-8",
+    )
+
+
+def get_custom_model_files(
+    custom_model_folder: str,
+    runtime_parameter_values: Sequence[
+        pulumi_datarobot.CustomModelRuntimeParameterValueArgs
+    ],
+) -> list[tuple[str, str]]:
+    # generate model-metadata.yaml file in the custom model folder
+    _generate_metadata_yaml(
+        agent_name="agent_crewai",
+        custom_model_folder=custom_model_folder,
+        runtime_parameter_values=runtime_parameter_values,
+    )
     # Get all files from application path, following symlinks
     # When we've upgraded to Python 3.13 we can use Path.glob(reduce_symlinks=True)
     # https://docs.python.org/3.13/library/pathlib.html#pathlib.Path.glob
@@ -183,6 +235,31 @@ def get_mcp_runtime_parameters_from_env() -> list[
         )
         pulumi.info(f"MCP configured with external server: {external_mcp_url}")
 
+    # Add optional EXTERNAL_MCP_HEADERS
+    external_mcp_headers = os.environ.get("EXTERNAL_MCP_HEADERS")
+    if external_mcp_headers:
+        mcp_runtime_parameters.append(
+            pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+                key="EXTERNAL_MCP_HEADERS",
+                type="string",
+                value=external_mcp_headers,
+            )
+        )
+        pulumi.info(f"External MCP configured with headers: {external_mcp_headers}")
+
+    # Add optional EXTERNAL_MCP_TRANSPORT parameter
+    external_mcp_transport = os.environ.get("EXTERNAL_MCP_TRANSPORT")
+    if external_mcp_transport:
+        external_mcp_transport = os.environ["EXTERNAL_MCP_TRANSPORT"]
+        mcp_runtime_parameters.append(
+            pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+                key="EXTERNAL_MCP_TRANSPORT",
+                type="string",
+                value=external_mcp_transport,
+            )
+        )
+        pulumi.info(f"External MCP configured with transport: {external_mcp_transport}")
+
     return mcp_runtime_parameters
 
 
@@ -209,28 +286,34 @@ pulumi.info("NOTE: [unknown] values will be populated after performing an update
 
 # Start of Pulumi settings and application infrastructure
 if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
-    agent_crewai_execution_environment_id = os.environ[
-        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT"
-    ]
+    # Get the default execution environment from environment variable
+    execution_environment_id = os.environ["DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT"]
+    if DEFAULT_EXECUTION_ENVIRONMENT in execution_environment_id:
+        pulumi.info("Using default GenAI Agentic Execution Environment.")
+        execution_environment_id = RuntimeEnvironments.PYTHON_311_GENAI_AGENTS.value.id
 
-    if DEFAULT_EXECUTION_ENVIRONMENT in agent_crewai_execution_environment_id:
+    # Get the pinned version ID if provided
+    execution_environment_version_id = os.environ.get(
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", ""
+    )
+    if not re.match("^[a-f\d]{24}$", execution_environment_version_id):
         pulumi.info(
-            "Using default GenAI Agents execution environment "
-            + agent_crewai_execution_environment_id
+            "No valid execution environment version ID provided, using latest version."
         )
-        agent_crewai_execution_environment = pulumi_datarobot.ExecutionEnvironment.get(
-            id=RuntimeEnvironments.PYTHON_311_GENAI_AGENTS.value.id,
-            resource_name=agent_crewai_asset_name + " Execution Environment",
-        )
-    else:
-        pulumi.info(
-            "Using existing execution environment "
-            + agent_crewai_execution_environment_id
-        )
-        agent_crewai_execution_environment = pulumi_datarobot.ExecutionEnvironment.get(
-            id=agent_crewai_execution_environment_id,
-            resource_name=agent_crewai_asset_name + " Execution Environment",
-        )
+        execution_environment_version_id = ""
+
+    pulumi.info(
+        "Using existing execution environment: "
+        + execution_environment_id
+        + " Version ID: "
+        + execution_environment_version_id
+    )
+
+    agent_crewai_execution_environment = pulumi_datarobot.ExecutionEnvironment.get(
+        id=execution_environment_id,
+        version_id=execution_environment_version_id,
+        resource_name=agent_crewai_asset_name + " Execution Environment",
+    )
 else:
     agent_crewai_exec_env_use_cases = ["customModel", "notebook"]
     if os.path.exists(
@@ -262,31 +345,46 @@ else:
             use_cases=agent_crewai_exec_env_use_cases,
         )
 
-agent_crewai_custom_model_files = get_custom_model_files(
-    str(os.path.join(str(agent_crewai_application_path), "custom_model"))
-)
+# Prepare runtime parameters for agent custom model deployment
+agent_runtime_parameter_values: list[
+    pulumi_datarobot.CustomModelRuntimeParameterValueArgs
+] = [] + llm_custom_model_runtime_parameters + get_mcp_custom_model_runtime_parameters()
 
-base_environment_version_id: str | pulumi.Output[str] = (
-    agent_crewai_execution_environment.version_id
+# Handle session secret key credential
+SESSION_SECRET_KEY: Final[str] = "SESSION_SECRET_KEY"
+
+if session_secret_key := os.environ.get(SESSION_SECRET_KEY):
+    pulumi.export(SESSION_SECRET_KEY, session_secret_key)
+    session_secret_cred = pulumi_datarobot.ApiTokenCredential(
+        agent_crewai_asset_name + " Session Secret Key",
+        args=pulumi_datarobot.ApiTokenCredentialArgs(api_token=str(session_secret_key)),
+    )
+    agent_runtime_parameter_values.append(
+        pulumi_datarobot.CustomModelRuntimeParameterValueArgs(
+            type="credential",
+            key=SESSION_SECRET_KEY,
+            value=session_secret_cred.id,
+        ),
+    )
+
+agent_crewai_custom_model_files = get_custom_model_files(
+    custom_model_folder=str(
+        os.path.join(str(agent_crewai_application_path), "custom_model")
+    ),
+    runtime_parameter_values=agent_runtime_parameter_values,
 )
-pinned_version_id = os.environ.get(
-    "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", ""
-)
-if pinned_version_id and re.match("^[a-f\d]{24}$", pinned_version_id):
-    base_environment_version_id = pinned_version_id
 
 agent_crewai_custom_model = pulumi_datarobot.CustomModel(
     resource_name=agent_crewai_asset_name + " Custom Model",
     name=agent_crewai_asset_name + " Custom Model",
     base_environment_id=agent_crewai_execution_environment.id,
-    base_environment_version_id=base_environment_version_id,
+    base_environment_version_id=agent_crewai_execution_environment.version_id,
     target_type="AgenticWorkflow",
     target_name="response",
     language="python",
     use_case_ids=[use_case.id],
     files=agent_crewai_custom_model_files,
-    runtime_parameter_values=llm_custom_model_runtime_parameters
-    + get_mcp_custom_model_runtime_parameters(),
+    runtime_parameter_values=agent_runtime_parameter_values,
 )
 
 agent_crewai_custom_model_endpoint = agent_crewai_custom_model.id.apply(

@@ -53,7 +53,7 @@ print("\n.   - ".join(
     [
         model["model"]
         for model in data["data"]
-        if not model["isDeprecated"] and model["isActive"]
+        if model["isActive"]
     ]
 ))
 """
@@ -64,7 +64,7 @@ validate_feature_flags(REQUIRED_FEATURE_FLAGS)
 
 # This does a quick check that validates the selected model is available
 # by checking the LLM Gateway. If it isn't, it will raise an error
-# with the list of models that are available and not deprecated.
+# with the list of models that are available and active.
 verify_llm_gateway_model_availability(default_model)
 
 # LiteLLM support DataRobot as a provider, so this validates

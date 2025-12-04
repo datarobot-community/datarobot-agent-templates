@@ -28,10 +28,8 @@ This repository provides ready-to-use templates for building and deploying agent
 Agentic templates streamline the process of setting up new workflows with minimal configuration requirements.
 They support local development and testing, as well as deployment to production environments within DataRobot.
 
-```diff
--IMPORTANT: This repository updates frequently. Make sure to update your
--local branch regularly to obtain the latest changes.
-```
+> [!IMPORTANT]
+> This repository updates frequently. Make sure to update your local branch regularly to obtain the latest changes.
 
 ---
 
@@ -47,26 +45,24 @@ They support local development and testing, as well as deployment to production 
 
 # Available templates
 
-This repository includes templates for three popular agent frameworks and a generic base template that can be adapted to any framework of your choice.
-Each template includes a simple example agentic workflow with 3 agents and 3 tasks.
+This repository includes templates for four popular agent frameworks and a generic base template that can be adapted to any framework of your choice.
+Each template includes a simple example agentic workflow with two agents and three tasks.
 
 | Framework        | Description                                                | GitHub Repo | Docs  |
 |------------------|------------------------------------------------------------|-------------|-------|
-| **CrewAI**       | A multi-agent framework with focus on role-based agents.   | [GitHub](https://github.com/crewAIInc/crewAI)       | [Docs](https://docs.crewai.com/)|
-| **Generic Base** | A barebones template that can be adapted to any framework. | -           | -     |
-| **LangGraph**    | Multi-agent orchestration with state graphs.               | [GitHub](https://github.com/langchain-ai/langgraph) | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
-| **Llama-Index**  | A framework for building RAG systems.                      | [GitHub](https://github.com/run-llama/llama_index) | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
-| **NVIDIA NeMo Agent Toolkit** | A framework for connecting enterprise agents to data sources and tools. | [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit) | [Docs](https://developer.nvidia.com/nemo-agent-toolkit)|
+| **CrewAI**             | A multi-agent framework with focus on role-based agents.   | [GitHub](https://github.com/crewAIInc/crewAI)                     | [Docs](https://docs.crewai.com/)|
+| **Generic Base**       | A barebones template that can be adapted to any framework. | -           | -     |
+| **LangGraph**          | Multi-agent orchestration with state graphs.               | [GitHub](https://github.com/langchain-ai/langgraph)               | [Docs](https://langchain-ai.github.io/langgraph/concepts/why-langgraph/)|
+| **Llama-Index**        | A framework for building RAG systems.                      | [GitHub](https://github.com/run-llama/llama_index)                | [Docs](https://gpt-index.readthedocs.io/en/latest/)|
+| **NeMo Agent Toolkit** | A framework for connecting enterprise agents to data sources and tools. | [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit) | [Docs](https://developer.nvidia.com/nemo-agent-toolkit)|
 
 # Installation
 
-```diff
--IMPORTANT: This repository is only compatible with macOS and Linux operating systems.
-```
+> [!CAUTION]
+> This repository is only compatible with macOS and Linux operating systems.
+> If you are using Windows, consider using a [DataRobot codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html), [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install), or a virtual machine running a supported OS.
 
-> If you are using Windows, consider using a [DataRobot codespace](https://docs.datarobot.com/en/docs/workbench/wb-notebook/codespaces/index.html), Windows Subsystem for Linux (WSL), or a virtual machine running a supported OS.
-
-Ensure you have the following tools installed and on your system at the required version (or newer).
+Ensure that you have the following tools installed and on your system at the required version (or newer).
 It is **recommended to install the tools system-wide** rather than in a virtual environment to ensure they are available in your terminal session.
 
 ## Prerequisite tools
@@ -81,21 +77,20 @@ For detailed installation steps, see [Installation instructions](https://docs.da
 | **Pulumi**   | >= 3.163.0 | An Infrastructure as Code tool. | [Pulumi installation guide](https://www.pulumi.com/docs/iac/download-install/)        |
 | **Taskfile** | >= 3.43.3  | A task runner.                  | [Taskfile installation guide](https://taskfile.dev/docs/installation)                 |
 
-> **IMPORTANT**: You will also need a compatible C++ compiler and build tools installed on your system to compile some Python packages.
+> [!IMPORTANT]
+> You will also need a compatible C++ compiler and build tools installed on your system to compile some Python packages.
 
 # Create and deploy your agent
 
-```diff
--IMPORTANT: Ensure all prerequisites are installed before proceeding.
-```
+> [!CAUTION]
+> Ensure that all prerequisites are installed before proceeding.
 
 This guide walks you through setting up an agentic workflow using one of several provided templates.
 It returns a Markdown (`.md`) document about your specified topic based on the research of a series of agents.
-The example workflow contains these 3 agents:
+The example workflow contains these two agents:
 
 - **Researcher**: Gathers information on a given topic using web search.
 - **Writer**: Creates a document based on the research.
-- **Editor**: Reviews and edits the document for clarity and correctness.
 
 ## Clone the agent template repository
 
@@ -119,10 +114,8 @@ git clone -b release/[YOUR_DATA_ROBOT_VERSION] https://github.com/datarobot-comm
 cd datarobot-agent-templates
 ```
 
-> **NOTE**: To customize or track your own workflows, you can 
-> [fork this repository](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo), 
-> [change the remote URL](https://docs.github.com/en/get-started/git-basics/managing-remote-repositories), or 
-> [create a new repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository).
+> [!TIP]
+> To customize or track your own workflows, you can [fork this repository](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo), [change the remote URL](https://docs.github.com/en/get-started/git-basics/managing-remote-repositories), or [create a new repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository).
 
 ## Locate your DataRobot API key and endpoint
 
@@ -164,20 +157,21 @@ Run the helper script to start development:
 task start
 ```
 
-> **NOTE**: If you encounter errors with `task start`, ensure you've completed all [prerequisite](#installation) steps.
+> [!TIP]
+> If you encounter errors with `task start`, ensure that you've completed all [prerequisite](#installation) steps.
 
 Specify which of the four available templates you would like to use during the `task start` process:
 
-| Directory            | Framework   | Description                                    |
-|----------------------|-------------|------------------------------------------------|
-| `agent_crewai`       | CrewAI      | Role-based multi-agent collaboration framework |
-| `agent_generic_base` | Generic     | Base template for any framework                |
-| `agent_langgraph`    | LangGraph   | State-based orchestration framework            |
-| `agent_llamaindex`   | Llama-Index | RAG-focused framework                          |
+| Directory            | Framework          | Description                                    |
+|----------------------|--------------------|------------------------------------------------|
+| `agent_crewai`       | CrewAI             | Role-based multi-agent collaboration framework |
+| `agent_generic_base` | Generic            | Base template for any framework                |
+| `agent_langgraph`    | LangGraph          | State-based orchestration framework            |
+| `agent_llamaindex`   | Llama-Index        | RAG-focused framework                          |
 | `agent_nat`          | NeMo Agent Toolkit | NVIDIA NeMo Agent Toolkit framework     |
 
 <details>
-<summary><b>Which template should I choose?</b></summary>
+<summary><b><i>Which template should I choose?</i></b></summary>
 
   While all templates can use DataRobot tools and the DataRobot LLM Gateway, the ideal scenario for each can vary.
 
@@ -196,20 +190,19 @@ Specify which of the four available templates you would like to use during the `
   Select this template if you already have experience developing and modifying agentic workflows, or if you need to build a custom agentic workflow from scratch.
   Generic base provides maximum flexibility for integrating custom DataRobot [agentic tools](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-tools.html) or building workflows that don't fit standard patterns.
 
-</details>
-
-<!--
-  **NeMo Agent Toolkit**: NeMo Agent Toolkit focuses on 'How well', and is ideal for problems that require optimization, observability, and performance monitoring.
+  **NeMo Agent Toolkit**: The NeMo Agent Toolkit template focuses on 'How well', and is ideal for problems that require optimization, observability, and performance monitoring.
   It excels at enhancing existing agent workflows with built-in profiling, observability integrations, and evaluation systems without requiring you to replatform.
   It can be combined with DataRobot tools and observability platforms like Phoenix, Weave, and Langfuse to provide end-to-end visibility into agent performance and costs.
--->
+
+</details>
 
 When prompted to setup the Python environment and install prerequisites, type `y` and press `Enter`.
 
 After selection, setup will finish, leaving only files relevant to the template specified in your branch.
 **To switch frameworks later, re-clone the repository and run the steps above again**.
 
-> **NOTE**: Run `task` (with no parameters) from the root directory to see all available commands.
+> [!TIP]
+> Run `task` (with no parameters) from the root directory to see all available commands.
 > Aside from `start`, none are necessary to complete installation.
 
 ## Test your agent for local development
@@ -265,7 +258,8 @@ During the deploy process, you will be asked to provide a **Pulumi stack name** 
 Once you have provided one, the deploy process provides a preview link.
 Review the Pulumi preview and approve changes by typing `yes` or pressing `Enter`.
 
-> **NOTE**: If prompted to perform an update, select `yes` and press `Enter`.
+> [!NOTE]
+> If prompted to perform an update, select `yes` and press `Enter`.
 
 Deployment takes several minutes.
 When complete, a resource summary with important IDs/URLs is displayed:
@@ -303,7 +297,8 @@ In the following command, replace <YOUR_DEPLOYMENT_ID> with your actual deployme
 task agent:cli -- execute-deployment --user_prompt 'Tell me about Generative AI' --deployment_id <YOUR_DEPLOYMENT_ID>
 ```
 
-> **NOTE**: The command may take a few minutes to complete.
+> [!NOTE]
+> The command may take a few minutes to complete.
 
 Once the repsonse has been processed, the response displays.
 The output below is an example, but your actual response will vary.

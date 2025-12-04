@@ -23,11 +23,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # Patch all Pulumi resources and functions used in the module
 @pytest.fixture(autouse=True)
-def pulumi_mocks(monkeypatch):
+def pulumi_mocks(monkeypatch, tmp_path):
     # Mock infra.__init__ exported objects
     mock_use_case = MagicMock()
     mock_use_case.id = "mock-use-case-id"
-    mock_project_dir = Path("/mock/project/dir")
+    mock_project_dir = tmp_path
     monkeypatch.setattr("infra.use_case", mock_use_case)
     monkeypatch.setattr("infra.project_dir", mock_project_dir)
 
@@ -40,7 +40,7 @@ def pulumi_mocks(monkeypatch):
     # interface required for this module.
     mock_mcp_module = MagicMock()
     mock_mcp_module.mcp_custom_model_runtime_parameters = []
-    monkeypatch.setitem(sys.modules, "infra.mcp", mock_mcp_module)
+    monkeypatch.setitem(sys.modules, "infra.", mock_mcp_module)
     # Mock pulumi_datarobot resources
     monkeypatch.setattr("pulumi_datarobot.ExecutionEnvironment", MagicMock())
     monkeypatch.setattr("pulumi_datarobot.CustomModel", MagicMock())
@@ -195,7 +195,10 @@ def test_execution_environment_default_set(monkeypatch):
 
     # Check that pulumi.info was called with the correct message
     agent_infra.pulumi.info.assert_any_call(
-        "Using default GenAI Agents execution environment [DataRobot] Python 3.11 GenAI Agents"
+        "Using default GenAI Agentic Execution Environment."
+    )
+    agent_infra.pulumi.info.assert_any_call(
+        "No valid execution environment version ID provided, using latest version."
     )
 
     # Check that ExecutionEnvironment.get was called with the correct parameters
@@ -203,6 +206,45 @@ def test_execution_environment_default_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "python-311-genai-agents-id"
+    assert kwargs["version_id"] == ""
+    assert (
+        kwargs["resource_name"] == "[unittest] [agent_llamaindex] Execution Environment"
+    )
+
+    # ExecutionEnvironment constructor should not be called when using default env
+    agent_infra.pulumi_datarobot.ExecutionEnvironment.assert_not_called()
+
+
+def test_execution_environment_pinned_set(monkeypatch):
+    """Test execution environment when DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT is set to default value"""
+    monkeypatch.setenv(
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT",
+        "[DataRobot] Python 3.11 GenAI Agents",
+    )
+    monkeypatch.setenv(
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID",
+        "690cd2f698419673f938f7c4",
+    )
+
+    import importlib
+    import infra.agent_llamaindex as agent_infra
+
+    importlib.reload(agent_infra)
+
+    # Check that pulumi.info was called with the correct message
+    agent_infra.pulumi.info.assert_any_call(
+        "Using default GenAI Agentic Execution Environment."
+    )
+    agent_infra.pulumi.info.assert_any_call(
+        "Using existing execution environment: python-311-genai-agents-id Version ID: 690cd2f698419673f938f7c4"
+    )
+
+    # Check that ExecutionEnvironment.get was called with the correct parameters
+    agent_infra.pulumi_datarobot.ExecutionEnvironment.get.assert_called_once()
+    args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
+
+    assert kwargs["id"] == "python-311-genai-agents-id"
+    assert kwargs["version_id"] == "690cd2f698419673f938f7c4"
     assert (
         kwargs["resource_name"] == "[unittest] [agent_llamaindex] Execution Environment"
     )
@@ -224,7 +266,10 @@ def test_execution_environment_custom_set(monkeypatch):
 
     # Check that pulumi.info was called with the correct message
     agent_infra.pulumi.info.assert_any_call(
-        "Using existing execution environment Custom Execution Environment"
+        "No valid execution environment version ID provided, using latest version."
+    )
+    agent_infra.pulumi.info.assert_any_call(
+        "Using existing execution environment: Custom Execution Environment Version ID: "
     )
 
     # Check that ExecutionEnvironment.get was called with the correct parameters
@@ -232,6 +277,7 @@ def test_execution_environment_custom_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "Custom Execution Environment"
+    assert kwargs["version_id"] == ""
     assert (
         kwargs["resource_name"] == "[unittest] [agent_llamaindex] Execution Environment"
     )
@@ -286,12 +332,27 @@ def test_custom_model_created(monkeypatch):
     assert kwargs["use_case_ids"] == [agent_infra.use_case.id]
     assert isinstance(kwargs["files"], list)
 
+    runtime_parameter_values = kwargs["runtime_parameter_values"]
+
+    assert len(runtime_parameter_values) == 1
+    assert runtime_parameter_values[0].type == "credential"
+    assert runtime_parameter_values[0].key == "SESSION_SECRET_KEY"
+    assert runtime_parameter_values[0].value is not None
+
 
 def test_custom_model_created_pinned_version_id(monkeypatch):
     """Test that pulumi_datarobot.CustomModel is created with correct arguments."""
     monkeypatch.delenv("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", raising=False)
     monkeypatch.setenv(
         "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", "690cd2f698419673f938f7c4"
+    )
+    monkeypatch.setattr(
+        "pulumi_datarobot.ExecutionEnvironment",
+        MagicMock(
+            return_value=MagicMock(
+                id="default-id", version_id="690cd2f698419673f938f7c4"
+            )
+        ),
     )
 
     import importlib
@@ -308,6 +369,7 @@ def test_custom_model_created_pinned_version_id(monkeypatch):
 
     agent_infra.pulumi_datarobot.CustomModel.assert_called_once()
     args, kwargs = agent_infra.pulumi_datarobot.CustomModel.call_args
+    assert kwargs["base_environment_id"] == "default-id"
     assert kwargs["base_environment_version_id"] == "690cd2f698419673f938f7c4"
 
 
@@ -411,11 +473,14 @@ class TestGetCustomModelFiles:
         # Create a simple file structure
         (tmp_path / "file1.py").write_text("print('hi')")
         (tmp_path / "file2.txt").write_text("hello")
-        files = agent_infra.get_custom_model_files(str(tmp_path))
+        files = agent_infra.get_custom_model_files(str(tmp_path), [])
         file_names = [f[1] for f in files]
         assert "file1.py" in file_names
         assert "file2.txt" in file_names
-        assert len(files) == 2
+
+        # Autogenerated metadata file
+        assert "model-metadata.yaml" in file_names
+        assert len(files) == 3
 
     def test_get_custom_model_files_excludes(self, tmp_path):
         import infra.agent_llamaindex as agent_infra
@@ -425,12 +490,15 @@ class TestGetCustomModelFiles:
         (tmp_path / ".DS_Store").write_text("")
         (tmp_path / "__pycache__").mkdir()
         (tmp_path / "__pycache__" / "foo.pyc").write_text("")
-        files = agent_infra.get_custom_model_files(str(tmp_path))
+        files = agent_infra.get_custom_model_files(str(tmp_path), [])
         file_names = [f[1] for f in files]
         assert "file1.py" in file_names
         assert ".DS_Store" not in file_names
         assert "__pycache__/foo.pyc" not in file_names
-        assert len(files) == 1
+
+        # Autogenerated metadata file
+        assert "model-metadata.yaml" in file_names
+        assert len(files) == 2
 
     def test_get_custom_model_files_symlinks(self, tmp_path):
         import infra.agent_llamaindex as agent_infra
@@ -442,7 +510,7 @@ class TestGetCustomModelFiles:
         symlink_dir.mkdir()
         symlink = symlink_dir / "link.py"
         symlink.symlink_to(real_file)
-        files = agent_infra.get_custom_model_files(str(tmp_path))
+        files = agent_infra.get_custom_model_files(str(tmp_path), [])
         file_names = [f[1] for f in files]
         assert "real.py" in file_names
 
@@ -590,13 +658,21 @@ name = "old-project"
 
 
 class TestMaybeImportFromModule:
+    @pytest.fixture
+    def skip_if_no_fastmcp(self):
+        """Skip tests if fastmcp module is not available."""
+        mcp_module = ""
+        if not mcp_module:
+            pytest.skip("Skipping tests of existing MCP when module is not provided.")
+
+    @pytest.mark.usefixtures("skip_if_no_fastmcp")
     def test_maybe_import_from_module_success(self):
         """Test that maybe_import_from_module successfully imports an existing module."""
         import infra.agent_llamaindex as agent_infra
 
         # The fixture sets up the mocked MCP module with mcp_custom_model_runtime_parameters
         result = agent_infra.maybe_import_from_module(
-            "mcp", "mcp_custom_model_runtime_parameters"
+            "", "mcp_custom_model_runtime_parameters"
         )
         assert result is not None
 
@@ -612,7 +688,7 @@ class TestMaybeImportFromModule:
 
         # Attempt to import from the non-existent module
         result = agent_infra.maybe_import_from_module(
-            "mcp", "mcp_custom_model_runtime_parameters"
+            "", "mcp_custom_model_runtime_parameters"
         )
         assert result is None
 
@@ -640,6 +716,10 @@ class TestGetMcpCustomModelRuntimeParameters:
         # Set up environment variables
         monkeypatch.setenv("MCP_DEPLOYMENT_ID", "test-deployment-123")
         monkeypatch.setenv("EXTERNAL_MCP_URL", "https://example.com/mcp")
+        monkeypatch.setenv(
+            "EXTERNAL_MCP_HEADERS", '{"Authorization": "Bearer token123"}'
+        )
+        monkeypatch.setenv("EXTERNAL_MCP_TRANSPORT", "sse")
 
         # Mock importlib.import_module to raise ImportError
         def mock_import_module(name, package=None):
@@ -651,7 +731,7 @@ class TestGetMcpCustomModelRuntimeParameters:
         result = agent_infra.get_mcp_custom_model_runtime_parameters()
 
         assert isinstance(result, list)
-        assert len(result) == 2
+        assert len(result) == 4
 
         # Check MCP_DEPLOYMENT_ID parameter
         mcp_deployment_param = next(
@@ -668,3 +748,133 @@ class TestGetMcpCustomModelRuntimeParameters:
         assert external_mcp_param is not None
         assert external_mcp_param.type == "string"
         assert external_mcp_param.value == "https://example.com/mcp"
+
+        # Check EXTERNAL_MCP_HEADERS parameter
+        external_mcp_headers_param = next(
+            (p for p in result if p.key == "EXTERNAL_MCP_HEADERS"), None
+        )
+        assert external_mcp_headers_param is not None
+        assert external_mcp_headers_param.type == "string"
+        assert external_mcp_headers_param.value == (
+            '{"Authorization": "Bearer token123"}'
+        )
+
+        # Check EXTERNAL_MCP_TRANSPORT parameter
+        external_mcp_transport_param = next(
+            (p for p in result if p.key == "EXTERNAL_MCP_TRANSPORT"), None
+        )
+        assert external_mcp_transport_param is not None
+        assert external_mcp_transport_param.type == "string"
+        assert external_mcp_transport_param.value == "sse"
+
+
+class TestGenerateMetadataYaml:
+    def test_mixed_parameters(self, tmp_path, monkeypatch):
+        """Test _generate_metadata_yaml with string and credential parameters, including special characters."""
+        import infra.agent_llamaindex as agent_infra
+        import yaml  # type: ignore[import-untyped]
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Create mixed runtime parameters with special characters
+        mock_params = [
+            MagicMock(key="LLM_DEPLOYMENT_ID", type="string"),
+            MagicMock(key="SESSION_SECRET_KEY", type="credential"),
+            MagicMock(key="PARAM_WITH_UNDERSCORE_123", type="string"),
+        ]
+
+        # Call the function with tmp_path as the custom_model_folder
+        agent_infra._generate_metadata_yaml(
+            "agent_llamaindex", str(tmp_path), mock_params
+        )
+
+        # Read and parse the generated YAML
+        metadata_file = tmp_path / "model-metadata.yaml"
+        assert metadata_file.exists()
+
+        with open(metadata_file) as f:
+            metadata = yaml.safe_load(f)
+
+        # Verify metadata structure
+        assert metadata["name"] == "agent_llamaindex"
+        assert metadata["type"] == "inference"
+        assert metadata["targetType"] == "agenticworkflow"
+
+        # Verify parameters maintain order and correct types
+        params = metadata["runtimeParameterDefinitions"]
+        assert len(params) == 3
+
+        # String parameter with defaultValue
+        assert params[0]["fieldName"] == "LLM_DEPLOYMENT_ID"
+        assert params[0]["type"] == "string"
+        assert "defaultValue" not in params[0]
+
+        # Credential parameter without defaultValue
+        assert params[1]["fieldName"] == "SESSION_SECRET_KEY"
+        assert params[1]["type"] == "credential"
+        assert "defaultValue" not in params[1]
+        assert "credentialType" not in params[1]
+
+        # String parameter with special characters
+        assert params[2]["fieldName"] == "PARAM_WITH_UNDERSCORE_123"
+        assert params[2]["type"] == "string"
+        assert "defaultValue" not in params[2]
+
+    def test_with_empty_parameters(self, tmp_path, monkeypatch):
+        """Test _generate_metadata_yaml generates correct YAML with empty parameter list."""
+        import infra.agent_llamaindex as agent_infra
+        import yaml  # type: ignore[import-untyped]
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Call with empty parameters
+        agent_infra._generate_metadata_yaml("agent_llamaindex", str(tmp_path), [])
+
+        # Read and parse the generated YAML
+        metadata_file = tmp_path / "model-metadata.yaml"
+        assert metadata_file.exists()
+
+        with open(metadata_file) as f:
+            metadata = yaml.safe_load(f)
+
+        # Verify structure
+        assert metadata["name"] == "agent_llamaindex"
+        assert metadata["type"] == "inference"
+        assert metadata["targetType"] == "agenticworkflow"
+        assert metadata["runtimeParameterDefinitions"] == []
+
+    def test_format_and_overwrite(self, tmp_path, monkeypatch):
+        """Test _generate_metadata_yaml file formatting and overwrite behavior."""
+        import infra.agent_llamaindex as agent_infra
+        import yaml  # type: ignore[import-untyped]
+
+        # Mock the application path to point to our tmp_path
+        monkeypatch.setattr(agent_infra, "agent_llamaindex_application_path", tmp_path)
+
+        # Create an existing file with different content
+        metadata_file = tmp_path / "model-metadata.yaml"
+        metadata_file.write_text("old: content\n")
+
+        mock_params = [MagicMock(key="NEW_PARAM", type="string")]
+        agent_infra._generate_metadata_yaml(
+            "agent_llamaindex", str(tmp_path), mock_params
+        )
+
+        # Check raw file format
+        content = metadata_file.read_text()
+        assert content.startswith("---\n")
+        assert "name: agent_llamaindex" in content
+        assert "type: inference" in content
+        assert "targetType: agenticworkflow" in content
+        assert "runtimeParameterDefinitions:" in content
+        assert "fieldName: NEW_PARAM" in content
+
+        # Verify the old file was overwritten
+        with open(metadata_file) as f:
+            metadata = yaml.safe_load(f)
+
+        assert "old" not in metadata
+        assert metadata["name"] == "agent_llamaindex"
+        assert metadata["runtimeParameterDefinitions"][0]["fieldName"] == "NEW_PARAM"

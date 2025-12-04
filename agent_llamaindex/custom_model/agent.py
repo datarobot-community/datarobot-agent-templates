@@ -15,7 +15,10 @@
 from datetime import datetime
 from typing import Any, Optional, Union
 
+# isort: off
 from config import Config
+
+# isort: on
 from datarobot_genai.core.agents import extract_user_prompt_content
 from datarobot_genai.llama_index import (
     DataRobotLiteLLM,
@@ -109,7 +112,7 @@ class MyAgent(LlamaIndexAgent):
                 "before handing off control to the WriterAgent."
             ),
             llm=self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
-            tools=[self.record_notes],
+            tools=[self.record_notes, *self.mcp_tools],
             can_handoff_to=["WriterAgent"],
         )
 
@@ -124,7 +127,7 @@ class MyAgent(LlamaIndexAgent):
                 "Once the report is written, you should get feedback at least once from the EditorAgent."
             ),
             llm=self.llm(preferred_model="datarobot/azure/gpt-4o-mini"),
-            tools=[self.write_report],
+            tools=[self.write_report, *self.mcp_tools],
             can_handoff_to=["EditorAgent"],
         )
 
@@ -140,7 +143,7 @@ class MyAgent(LlamaIndexAgent):
                 "WriterAgent implements the changes after submitting the review."
             ),
             llm=self.llm(),
-            tools=[self.review_report],
+            tools=[self.review_report, *self.mcp_tools],
             # Editor is terminal in this simple flow; no handoff
         )
 

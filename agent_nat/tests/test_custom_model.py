@@ -94,7 +94,7 @@ class TestCustomModel:
                 "messages": [{"role": "user", "content": '{"topic": "test"}'}],
                 "environment_var": True,
                 "stream": stream,
-            }
+            },
         )
 
     @patch("custom.MyAgent")

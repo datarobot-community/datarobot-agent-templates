@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.3.6
+- Upgrade datarobot-genai to bring updated functionality to agents
+- Support pinning pulumi plugins when rate limiting is an issue
+- Rename PULUMI_STACK_NAME to PULUMI_STACK
+- Improve MCP integrations support
+- Improve stability of streaming and functionality in agentic workflows
+- Remove maybe_set functionality for RuntimeParameters. These can be imported from Config()
+- Synchronize logic with af-component-agent
+- Fix deprecated LLM models
+- Fix docker_context testing
+
+## 11.3.5
+- Hotfix for tracing being divided across threads when asynchronous execution is used
+
+## 11.3.4
+- Pin datarobot-genai version to prevent further updates
+
 ## 11.3.3
 
 - Do not run dev server in autoreload mode when running CLI
@@ -33,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add built-in support for connecting agents to MCP servers
 - Rename `api_tests` root folder to `tests` for clarity
 - Add .env helper instead of raising error if a `.env` is not found
-- If `PULUMI_STACK_NAME` is in the environment, then the stack will be automatically passed to pulumi
+- If `PULUMI_STACK` is in the environment, then the stack will be automatically passed to pulumi
 - Update `datarobot` package to include latest functionality
 - Fix an issue where stream=true on an agent that didn't support streaming would raise an error
 - Add support for `datarobot_genai` package to streamline development

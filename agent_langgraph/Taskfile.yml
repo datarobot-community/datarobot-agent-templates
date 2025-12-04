@@ -27,6 +27,17 @@ tasks:
       - echo "Updating local dependencies"
       - uv sync --extra dev -U
     silent: true
+  auth-check:
+    silent: true
+    desc: "🔐 Check authentication prerequisites"
+    cmds:
+      - |
+        if command -v dr &> /dev/null && dr auth help 2>&1 | grep -q "check"; then
+          echo "🔐 Checking authentication.."
+          dr auth check
+        else
+          echo "ℹ️  Skipping auth check (not available)"
+        fi
   add-dependency:
     desc: 🛠️ [agent_langgraph] Add provided packages as a new dependency to an agent
     cmds:
@@ -73,6 +84,8 @@ tasks:
     desc: 🖥️ [agent_langgraph] Run the CLI with provided arguments
     vars:
       START_DEV: "{{.START_DEV}}"
+    deps:
+      - auth-check
     cmds:
       - echo "Running CLI {{.CLI_ARGS}}"
       - |
@@ -135,8 +148,10 @@ tasks:
     silent: true
   dev:
     desc: 🔨 [agent_langgraph] Run the development server
+    deps:
+      - auth-check
     cmds:
-      - "{{.CLEAN_PYTHON_ENV}} uv run python dev.py"
+      - "{{.CLEAN_PYTHON_ENV}} uv run python dev.py --autoreload"
   dev-stop:
     desc: 🛑 [agent_langgraph] Stop the development server
     cmds:
@@ -150,26 +165,43 @@ tasks:
       - uv run chainlit run --host 0.0.0.0 --port 8083 -w lit.py
   create-docker-context:
     desc: 🐳 [agent_langgraph] Create the template for a local docker_context image
+    vars:
+      BRANCH: "{{.BRANCH}}"
     cmds:
       - echo "Creating docker_context folder inside agent."
       - rm -rf ./docker_context
       - echo "Downloading datarobot-user-models repository..."
-      - curl -L -o datarobot-user-models.zip "https://github.com/datarobot/datarobot-user-models/archive/refs/heads/master.zip"
+      - |
+        GIT_BRANCH={{.BRANCH}}
+        if [ -n "$GIT_BRANCH" ]; then
+          echo "Downloading datarobot-user-models branch: $GIT_BRANCH"
+          curl -L -o datarobot-user-models.zip "https://github.com/datarobot/datarobot-user-models/archive/refs/heads/$GIT_BRANCH.zip"
+        else
+          echo "Downloading datarobot-user-models master branch"
+          curl -L -o datarobot-user-models.zip "https://github.com/datarobot/datarobot-user-models/archive/refs/heads/master.zip"
+        fi
       - echo "Extracting docker_context files..."
-      - unzip -q datarobot-user-models.zip "datarobot-user-models-master/public_dropin_environments/python311_genai_agents/*"
-      - cp -r datarobot-user-models-master/public_dropin_environments/python311_genai_agents ./docker_context
-      - rm -rf datarobot-user-models-master datarobot-user-models.zip
+      - |
+        TOP_FOLDER=$(unzip -qql datarobot-user-models.zip | head -n1 | awk '{print $4}' | cut -d/ -f1)
+        echo "Downloaded docker context branch name: $TOP_FOLDER"
+        unzip -q datarobot-user-models.zip "$TOP_FOLDER/public_dropin_environments/python311_genai_agents/*"
+        cp -r "$TOP_FOLDER/public_dropin_environments/python311_genai_agents" ./docker_context
+        rm -rf "$TOP_FOLDER" datarobot-user-models.zip
       # We need to rename these from their production variants to their local variants
       - rm ./docker_context/env_info.json
       - mv ./docker_context/Dockerfile ./docker_context/Dockerfile.prod
       - mv ./docker_context/Dockerfile.local ./docker_context/Dockerfile
       - echo "Docker context created inside agent_langgraph/docker_context"
-  build-docker-context:
-    desc: 🐳 [agent_langgraph] Build the Docker image
+  build-docker-image:
+    # desc: 🐳 [agent_langgraph] Build the Docker image
     cmds:
       - echo "Building Docker image"
       - cp pyproject.toml docker_context/pyproject.toml
       - cd docker_context && docker build --platform linux/amd64 -f Dockerfile -t agent_langgraph:latest .
+  build-docker-context:
+    desc: 🐳 [agent_langgraph] Build the Docker image
+    cmds:
+      - task: create-docker-context
       - echo "Saving Docker image"
       - docker save agent_langgraph:latest | gzip -1 > docker_context.tar.gz
     silent: true
