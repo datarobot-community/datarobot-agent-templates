@@ -206,7 +206,7 @@ def test_execution_environment_default_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "python-311-genai-agents-id"
-    assert kwargs["version_id"] == ""
+    assert kwargs["version_id"] is None
     assert (
         kwargs["resource_name"] == "[unittest] [agent_langgraph] Execution Environment"
     )
@@ -269,7 +269,7 @@ def test_execution_environment_custom_set(monkeypatch):
         "No valid execution environment version ID provided, using latest version."
     )
     agent_infra.pulumi.info.assert_any_call(
-        "Using existing execution environment: Custom Execution Environment Version ID: "
+        "Using existing execution environment: Custom Execution Environment Version ID: None"
     )
 
     # Check that ExecutionEnvironment.get was called with the correct parameters
@@ -277,7 +277,7 @@ def test_execution_environment_custom_set(monkeypatch):
     args, kwargs = agent_infra.pulumi_datarobot.ExecutionEnvironment.get.call_args
 
     assert kwargs["id"] == "Custom Execution Environment"
-    assert kwargs["version_id"] == ""
+    assert kwargs["version_id"] is None
     assert (
         kwargs["resource_name"] == "[unittest] [agent_langgraph] Execution Environment"
     )
@@ -530,27 +530,27 @@ dependencies = ["requests>=2.0"]
         (tmp_path / "pyproject.toml").write_text(pyproject_content)
         (tmp_path / "uv.lock").write_text("test content")
 
-        # Create custom_model and docker_context directories
-        (tmp_path / "custom_model").mkdir()
+        # Create agentic_workflow and docker_context directories
+        (tmp_path / "agentic_workflow").mkdir()
         (tmp_path / "docker_context").mkdir()
 
         # Call the function
         agent_infra.synchronize_pyproject_dependencies()
 
         # Check that pyproject.toml was copied to both directories
-        assert (tmp_path / "custom_model" / "pyproject.toml").exists()
+        assert (tmp_path / "agentic_workflow" / "pyproject.toml").exists()
         assert (tmp_path / "docker_context" / "pyproject.toml").exists()
-        assert (tmp_path / "custom_model" / "uv.lock").exists()
+        assert (tmp_path / "agentic_workflow" / "uv.lock").exists()
         assert (tmp_path / "docker_context" / "uv.lock").exists()
 
         # Verify the content is the same
         assert (
-            tmp_path / "custom_model" / "pyproject.toml"
+            tmp_path / "agentic_workflow" / "pyproject.toml"
         ).read_text() == pyproject_content
         assert (
             tmp_path / "docker_context" / "pyproject.toml"
         ).read_text() == pyproject_content
-        assert (tmp_path / "custom_model" / "uv.lock").read_text() == "test content"
+        assert (tmp_path / "agentic_workflow" / "uv.lock").read_text() == "test content"
         assert (tmp_path / "docker_context" / "uv.lock").read_text() == "test content"
 
     def test_synchronize_pyproject_dependencies_no_pyproject(
@@ -561,18 +561,18 @@ dependencies = ["requests>=2.0"]
         # Mock the application path to point to our tmp_path
         monkeypatch.setattr(agent_infra, "agent_langgraph_application_path", tmp_path)
 
-        # Create custom_model and docker_context directories but no pyproject.toml
-        (tmp_path / "custom_model").mkdir()
+        # Create agentic_workflow and docker_context directories but no pyproject.toml
+        (tmp_path / "agentic_workflow").mkdir()
         (tmp_path / "docker_context").mkdir()
 
         # Call the function - should return early without error
         agent_infra.synchronize_pyproject_dependencies()
 
         # Check that no pyproject.toml files were created
-        assert not (tmp_path / "custom_model" / "pyproject.toml").exists()
+        assert not (tmp_path / "agentic_workflow" / "pyproject.toml").exists()
         assert not (tmp_path / "docker_context" / "pyproject.toml").exists()
 
-    def test_synchronize_pyproject_dependencies_missing_custom_model_dir(
+    def test_synchronize_pyproject_dependencies_missing_agentic_workflow_dir(
         self, tmp_path, monkeypatch
     ):
         import infra.agent_langgraph as agent_infra
@@ -580,7 +580,7 @@ dependencies = ["requests>=2.0"]
         # Mock the application path to point to our tmp_path
         monkeypatch.setattr(agent_infra, "agent_langgraph_application_path", tmp_path)
 
-        # Create pyproject.toml and docker_context directory but not custom_model
+        # Create pyproject.toml and docker_context directory but not agentic_workflow
         pyproject_content = """[project]
 name = "test-project"
 """
@@ -591,7 +591,7 @@ name = "test-project"
         agent_infra.synchronize_pyproject_dependencies()
 
         # Check that pyproject.toml was only copied to docker_context
-        assert not (tmp_path / "custom_model").exists()
+        assert not (tmp_path / "agentic_workflow").exists()
         assert (tmp_path / "docker_context" / "pyproject.toml").exists()
         assert (
             tmp_path / "docker_context" / "pyproject.toml"
@@ -605,21 +605,21 @@ name = "test-project"
         # Mock the application path to point to our tmp_path
         monkeypatch.setattr(agent_infra, "agent_langgraph_application_path", tmp_path)
 
-        # Create pyproject.toml and custom_model directory but not docker_context
+        # Create pyproject.toml and agentic_workflow directory but not docker_context
         pyproject_content = """[project]
 name = "test-project"
 """
         (tmp_path / "pyproject.toml").write_text(pyproject_content)
-        (tmp_path / "custom_model").mkdir()
+        (tmp_path / "agentic_workflow").mkdir()
 
         # Call the function
         agent_infra.synchronize_pyproject_dependencies()
 
-        # Check that pyproject.toml was only copied to custom_model
-        assert (tmp_path / "custom_model" / "pyproject.toml").exists()
+        # Check that pyproject.toml was only copied to agentic_workflow
+        assert (tmp_path / "agentic_workflow" / "pyproject.toml").exists()
         assert not (tmp_path / "docker_context").exists()
         assert (
-            tmp_path / "custom_model" / "pyproject.toml"
+            tmp_path / "agentic_workflow" / "pyproject.toml"
         ).read_text() == pyproject_content
 
     def test_synchronize_pyproject_dependencies_overwrites_existing(
@@ -638,20 +638,22 @@ dependencies = ["requests>=3.0"]
         (tmp_path / "pyproject.toml").write_text(new_content)
 
         # Create directories with existing pyproject.toml files
-        (tmp_path / "custom_model").mkdir()
+        (tmp_path / "agentic_workflow").mkdir()
         (tmp_path / "docker_context").mkdir()
 
         old_content = """[project]
 name = "old-project"
 """
-        (tmp_path / "custom_model" / "pyproject.toml").write_text(old_content)
+        (tmp_path / "agentic_workflow" / "pyproject.toml").write_text(old_content)
         (tmp_path / "docker_context" / "pyproject.toml").write_text(old_content)
 
         # Call the function
         agent_infra.synchronize_pyproject_dependencies()
 
         # Check that the old files were overwritten with new content
-        assert (tmp_path / "custom_model" / "pyproject.toml").read_text() == new_content
+        assert (
+            tmp_path / "agentic_workflow" / "pyproject.toml"
+        ).read_text() == new_content
         assert (
             tmp_path / "docker_context" / "pyproject.toml"
         ).read_text() == new_content
@@ -784,7 +786,7 @@ class TestGenerateMetadataYaml:
             MagicMock(key="PARAM_WITH_UNDERSCORE_123", type="string"),
         ]
 
-        # Call the function with tmp_path as the custom_model_folder
+        # Call the function with tmp_path as the agentic_workflow folder
         agent_infra._generate_metadata_yaml(
             "agent_langgraph", str(tmp_path), mock_params
         )

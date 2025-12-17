@@ -15,6 +15,7 @@
 Choose this option for direct DataRobot LLM Gateway integration.
 """
 
+import os
 from datarobot_pulumi_utils.pulumi import export
 import pulumi_datarobot as datarobot
 
@@ -57,7 +58,9 @@ print("\n.   - ".join(
     ]
 ))
 """
-default_model: str = "datarobot/azure/gpt-4o-mini"
+default_model: str = os.environ.get(
+    "LLM_DEFAULT_MODEL", "datarobot/azure/gpt-5-mini-2025-08-07"
+)
 
 # Verify everything is configured properly for this configuration option.
 validate_feature_flags(REQUIRED_FEATURE_FLAGS)

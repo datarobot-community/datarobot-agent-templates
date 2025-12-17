@@ -78,7 +78,7 @@ create a `.env` file by copying the `.env.example` file and filling in the requi
         )
         env_variables[
             "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID"
-        ] = "690cbff963ff6b122f0f67a1" # Matches .env.template version
+        ] = "6936d3af440bcb12397f4203" # Matches .env.template version
 
         # Prompt for API token
         print("""
@@ -283,10 +283,6 @@ def remove_global_environment_files():
     # Remove development Taskfile if it exists
     try_to_remove(str(work_dir / "Taskfile_dev.yml"))
 
-    # Remove the infra Taskfile if it exists
-    try_to_remove(str(work_dir / "infra" / "Taskfile.yaml"))
-    try_to_remove(str(work_dir / "infra" / "Taskfile.yml"))
-
 
 def create_new_taskfile(agent_name: str):
     """Create a new Taskfile for the selected agent."""
@@ -304,7 +300,7 @@ includes:
     dir: ./{agent_name}
   # Source the infra Taskfile as flat tasks and point at the infra directory
   infra:
-    taskfile: ./{agent_name}/Taskfile_infra.yml
+    taskfile: ./infra/Taskfile.yaml
     dir: ./infra
 tasks:
   default:

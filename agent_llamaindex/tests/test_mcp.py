@@ -124,26 +124,23 @@ class TestMyAgentMCPIntegration:
                 # Expected when workflow is mocked
                 pass
 
-            # Verify load_mcp_tools was called with correct parameters
-            mock_load_mcp_tools.assert_called_once_with(
-                api_base="test_base",
-                api_key="test_key",
-                authorization_context={},
+            # Verify load_mcp_tools was called and provided authorization_context
+            mock_load_mcp_tools.assert_called_once()
+            assert (
+                mock_load_mcp_tools.call_args.kwargs.get("authorization_context") == {}
             )
 
             # Verify set_mcp_tools was called with the tools from MCP server
             assert agent.mcp_tools == mock_tools
 
-            # Verify mcp_tools property was accessed (by agent_planner, agent_writer, agent_editor)
+            # Verify mcp_tools property was accessed (by agent_planner, agent_writer)
             # We can verify this by checking that the agents were created with the tools
             planner = agent.agent_planner
             writer = agent.agent_writer
-            editor = agent.agent_editor
 
             # Verify all agents have MCP tools
             assert len(planner.tools) == 3  # record_notes + 2 MCP tools
             assert len(writer.tools) == 3  # write_report + 2 MCP tools
-            assert len(editor.tools) == 3  # review_report + 2 MCP tools
 
     def test_agent_loads_mcp_tools_from_datarobot_deployment_in_invoke(
         self, llamaindex_common_mocks
@@ -182,11 +179,10 @@ class TestMyAgentMCPIntegration:
                 # Expected when workflow is mocked
                 pass
 
-            # Verify load_mcp_tools was called with correct parameters
-            mock_load_mcp_tools.assert_called_once_with(
-                api_base=api_base,
-                api_key=api_key,
-                authorization_context={},
+            # Verify load_mcp_tools was called and provided authorization_context
+            mock_load_mcp_tools.assert_called_once()
+            assert (
+                mock_load_mcp_tools.call_args.kwargs.get("authorization_context") == {}
             )
 
             # Verify set_mcp_tools was called with the tools from MCP server
@@ -195,11 +191,9 @@ class TestMyAgentMCPIntegration:
             # Verify agents have MCP tools
             planner = agent.agent_planner
             writer = agent.agent_writer
-            editor = agent.agent_editor
 
             assert len(planner.tools) == 2  # record_notes + 1 MCP tool
             assert len(writer.tools) == 2  # write_report + 1 MCP tool
-            assert len(editor.tools) == 2  # review_report + 1 MCP tool
 
     def test_agent_works_without_mcp_tools(self, llamaindex_common_mocks):
         """Test that agent works correctly when no MCP tools are available."""
@@ -230,11 +224,9 @@ class TestMyAgentMCPIntegration:
             # Verify agents only have their default tools
             planner = agent.agent_planner
             writer = agent.agent_writer
-            editor = agent.agent_editor
 
             assert len(planner.tools) == 1  # only record_notes
             assert len(writer.tools) == 1  # only write_report
-            assert len(editor.tools) == 1  # only review_report
 
     def test_mcp_tools_property_accessed_by_all_agents(self, llamaindex_common_mocks):
         """Test that mcp_tools property is accessed by all three agents during workflow build."""
@@ -258,14 +250,13 @@ class TestMyAgentMCPIntegration:
                 agent.set_mcp_tools(mock_tools)
                 _ = agent.agent_planner
                 _ = agent.agent_writer
-                _ = agent.agent_editor
 
         # Verify set_mcp_tools was called with the tools from MCP server
         assert agent._mcp_tools == mock_tools
 
-        # Verify mcp_tools property was accessed at least 3 times (once per agent)
-        assert access_count["count"] >= 3, (
-            f"Expected at least 3 accesses (one per agent), got {access_count['count']}"
+        # Verify mcp_tools property was accessed at least 2 times (once per agent)
+        assert access_count["count"] >= 2, (
+            f"Expected at least 2 accesses (one per agent), got {access_count['count']}"
         )
 
     @patch(

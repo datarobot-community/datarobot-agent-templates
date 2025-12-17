@@ -148,7 +148,7 @@ def synchronize_pyproject_dependencies():
     )
     uv_lock_path = os.path.join(str(agent_generic_base_application_path), "uv.lock")
     custom_model_folder = str(
-        os.path.join(str(agent_generic_base_application_path), "custom_model")
+        os.path.join(str(agent_generic_base_application_path), "agentic_workflow")
     )
     docker_context_folder = str(
         os.path.join(str(agent_generic_base_application_path), "docker_context")
@@ -294,19 +294,19 @@ if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
 
     # Get the pinned version ID if provided
     execution_environment_version_id = os.environ.get(
-        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", ""
+        "DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT_VERSION_ID", None
     )
-    if not re.match("^[a-f\d]{24}$", execution_environment_version_id):
+    if not re.match("^[a-f\d]{24}$", str(execution_environment_version_id)):
         pulumi.info(
             "No valid execution environment version ID provided, using latest version."
         )
-        execution_environment_version_id = ""
+        execution_environment_version_id = None
 
     pulumi.info(
         "Using existing execution environment: "
         + execution_environment_id
         + " Version ID: "
-        + execution_environment_version_id
+        + str(execution_environment_version_id)
     )
 
     agent_generic_base_execution_environment = (
@@ -377,7 +377,7 @@ if session_secret_key := os.environ.get(SESSION_SECRET_KEY):
 
 agent_generic_base_custom_model_files = get_custom_model_files(
     custom_model_folder=str(
-        os.path.join(str(agent_generic_base_application_path), "custom_model")
+        os.path.join(str(agent_generic_base_application_path), "agentic_workflow")
     ),
     runtime_parameter_values=agent_runtime_parameter_values,
 )
@@ -389,6 +389,7 @@ agent_generic_base_custom_model = pulumi_datarobot.CustomModel(
     base_environment_version_id=agent_generic_base_execution_environment.version_id,
     target_type="AgenticWorkflow",
     target_name="response",
+    resource_bundle_id="cpu.medium",
     language="python",
     use_case_ids=[use_case.id],
     files=agent_generic_base_custom_model_files,
@@ -447,6 +448,9 @@ pulumi.export("Agent Playground URL " + agent_generic_base_asset_name, agent_gen
 agent_generic_base_agent_deployment_id: pulumi.Output[str] = cast(
     pulumi.Output[str], "None"
 )
+agent_generic_base_deployment_endpoint: pulumi.Output[str] = cast(
+    pulumi.Output[str], "None"
+)
 if os.environ.get("AGENT_DEPLOY") != "0":
     agent_generic_base_prediction_environment = pulumi_datarobot.PredictionEnvironment(
         resource_name=agent_generic_base_asset_name + " Prediction Environment",
@@ -491,7 +495,12 @@ if os.environ.get("AGENT_DEPLOY") != "0":
     agent_generic_base_agent_deployment_id = (
         agent_generic_base_agent_deployment.id.apply(lambda id: f"{id}")
     )
-    agent_generic_base_deployment_endpoint = agent_generic_base_agent_deployment.id.apply(
+    agent_generic_base_deployment_endpoint = (
+        agent_generic_base_agent_deployment.id.apply(
+            lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/deployments/{id}"
+        )
+    )
+    agent_generic_base_deployment_completions_endpoint = agent_generic_base_agent_deployment.id.apply(
         lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/deployments/{id}/chat/completions"
     )
 
@@ -501,7 +510,7 @@ if os.environ.get("AGENT_DEPLOY") != "0":
     )
     pulumi.export(
         "Agent Deployment Chat Endpoint " + agent_generic_base_asset_name,
-        agent_generic_base_deployment_endpoint,
+        agent_generic_base_deployment_completions_endpoint,
     )
 
 agent_generic_base_app_runtime_parameters = [
@@ -509,5 +518,10 @@ agent_generic_base_app_runtime_parameters = [
         key=agent_generic_base_application_name.upper() + "_DEPLOYMENT_ID",
         type="string",
         value=agent_generic_base_agent_deployment_id,
+    ),
+    pulumi_datarobot.ApplicationSourceRuntimeParameterValueArgs(
+        key=agent_generic_base_application_name.upper() + "_ENDPOINT",
+        type="string",
+        value=agent_generic_base_deployment_endpoint,
     ),
 ]

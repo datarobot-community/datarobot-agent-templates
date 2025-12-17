@@ -18,6 +18,7 @@ multiple LLMs through a single deployment with all of the DataRobot governance
 and monitoring baked in.
 """
 
+import os
 import datarobot as dr
 import pulumi
 import pulumi_datarobot as datarobot
@@ -71,8 +72,13 @@ print("\n.   - ".join(
     ]
 ))
 """
-default_model: str = "datarobot/bedrock/anthropic.claude-3-7-sonnet-20250219-v1:0"
-default_llm_id: str = "amazon-anthropic-claude-3-7-sonnet-v1"
+default_model: str = os.environ.get(
+    "LLM_DEFAULT_MODEL", "datarobot/azure/gpt-5-mini-2025-08-07"
+)
+default_llm_id: str = os.environ.get(
+    "LLM_DEFAULT_LLM_ID",
+    "azure-openai-gpt-5-mini",  # External LLM ID from the Playground
+)
 # Verify everything is configured properly for this configuration option.
 validate_feature_flags(REQUIRED_FEATURE_FLAGS)
 

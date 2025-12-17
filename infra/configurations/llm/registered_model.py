@@ -51,7 +51,9 @@ TEXTGEN_REGISTERED_MODEL_ID = os.environ["TEXTGEN_REGISTERED_MODEL_ID"]
 
 llm_application_name: str = "llm"
 llm_resource_name: str = "[llm]"
-default_model: str = "datarobot/datarobot-deployed-llm"
+default_model: str = os.environ.get(
+    "LLM_DEFAULT_MODEL", "datarobot/datarobot-deployed-llm"
+)
 
 # Verify the feature flags are available
 validate_feature_flags(REQUIRED_FEATURE_FLAGS)

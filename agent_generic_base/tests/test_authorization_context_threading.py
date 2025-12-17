@@ -12,228 +12,163 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Test to verify that authorization context is properly propagated to worker threads.
-
-This test ensures that the fix for the ContextVar threading issue works correctly.
-The authorization context must be accessible from worker threads where the agent runs.
-"""
-
-import threading
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from custom import chat, load_model
-from datarobot.models.genai.agent.auth import (
-    get_authorization_context,
-    set_authorization_context,
-)
 
 
-class TestAuthorizationContextThreading:
-    """Test authorization context propagation to worker threads."""
+@pytest.fixture
+def mock_agent():
+    with patch("custom.MyAgent") as mock:
+        mock_instance = MagicMock()
+        mock_instance.invoke = AsyncMock(
+            return_value=(
+                "agent result",
+                [],
+                {"completion_tokens": 1, "prompt_tokens": 2, "total_tokens": 3},
+            )
+        )
+        mock.return_value = mock_instance
+        yield mock, mock_instance
 
-    @patch("custom.MyAgent")
-    def test_chat_function_concurrent_threads_with_authorization_context(
-        self, mock_agent
+
+@pytest.fixture
+def load_model_result():
+    result = load_model("")
+    yield result
+    thread_pool_executor, event_loop = result
+    thread_pool_executor.shutdown(wait=True)
+
+
+@pytest.fixture
+def completion_params():
+    return {
+        "model": "test-model",
+        "messages": [{"role": "user", "content": '{"topic": "test"}'}],
+    }
+
+
+class TestAuthorizationContextPropagation:
+    def test_authorization_context_set_in_params(
+        self, mock_agent, load_model_result, completion_params
     ):
-        """
-        Test that the ACTUAL chat function properly propagates authorization context to worker threads.
+        mock_class, mock_instance = mock_agent
+        auth_context = {"token": "test-token", "user_id": "test-user"}
 
-        This test:
-        1. Calls the ACTUAL chat() function from agent_nat.custom_model.custom
-        2. Spawns multiple threads that each call chat() with different auth contexts
-        3. Tracks when get_authorization_context() is called in worker threads (created inside chat)
-        4. Verifies that the authorization context is accessible in each worker thread (no LookupError)
+        with patch("custom.resolve_authorization_context", return_value=auth_context):
+            chat(completion_params, load_model_result)
 
-        The worker thread is created inside chat() via thread_pool_executor.submit().
-        We verify that get_authorization_context() works in those worker threads.
-        """
-        # Create unique authorization contexts for each thread
-        thread_contexts = [
-            {"token": f"test-token-{i}", "user_id": f"test-user-{i}"} for i in range(3)
-        ]
+        call_kwargs = mock_class.call_args[1]
+        assert "authorization_context" in call_kwargs
+        assert call_kwargs["authorization_context"] == auth_context
 
-        # Set up mocks
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.invoke = AsyncMock(
-            return_value=(
-                "agent result",
-                [],
-                {
-                    "completion_tokens": 1,
-                    "prompt_tokens": 2,
-                    "total_tokens": 3,
-                },
-            )
-        )
-        mock_agent.return_value = mock_agent_instance
+    def test_authorization_context_passed_to_agent(
+        self, mock_agent, load_model_result, completion_params
+    ):
+        mock_class, mock_instance = mock_agent
+        auth_context = {"token": "test-token", "user_id": "test-user"}
 
-        # Track when get_authorization_context is called and from which thread
-        # This will track calls in the worker threads created inside chat()
-        context_calls = {}  # thread_id -> {successful: bool, exception: Exception or None, context_value: Any}
-        original_get_authorization_context = get_authorization_context
+        with patch("custom.resolve_authorization_context", return_value=auth_context):
+            chat(completion_params, load_model_result)
 
-        def tracked_get_authorization_context():
-            """Track when get_authorization_context is called in worker threads."""
-            thread_id = threading.current_thread().ident
-            thread_name = threading.current_thread().name
+        mock_class.assert_called_once()
+        call_kwargs = mock_class.call_args[1]
+        assert call_kwargs.get("authorization_context") == auth_context
 
-            # Only track calls from worker threads (not the main test threads)
-            # Worker threads are created inside chat() via thread_pool_executor.submit()
-            if thread_id not in context_calls:
-                context_calls[thread_id] = {
-                    "thread_name": thread_name,
-                    "successful": False,
-                    "exception": None,
-                    "context_value": None,
-                }
+    def test_empty_authorization_context_handled(
+        self, mock_agent, load_model_result, completion_params
+    ):
+        mock_class, mock_instance = mock_agent
 
-            # Try to get the context - this is what we're testing
-            try:
-                context = original_get_authorization_context()
-                context_calls[thread_id]["successful"] = True
-                context_calls[thread_id]["context_value"] = context
-                return context
-            except LookupError as e:
-                context_calls[thread_id]["exception"] = e
-                raise
+        with patch("custom.resolve_authorization_context", return_value={}):
+            response = chat(completion_params, load_model_result)
 
-        @pytest.skip("Skipping imports for this test until we can stabilize it")
-        def call_chat_in_thread(thread_id: int, auth_context: dict):
-            """Call the ACTUAL chat function in a separate thread with a specific auth context."""
-            # Set authorization context in this thread (simulating initialize_authorization_context)
-            set_authorization_context(auth_context)
+        assert response is not None
+        mock_instance.invoke.assert_called_once()
+        call_kwargs = mock_class.call_args[1]
+        assert call_kwargs.get("authorization_context") == {}
 
-            # Create load_model_result for this thread
-            load_model_result = load_model("")
 
-            completion_create_params = {
-                "model": "test-model",
-                "messages": [
-                    {"role": "user", "content": f'{{"topic": "test-{thread_id}"}}'}
-                ],
-            }
-
-            # Call the ACTUAL chat function - this should propagate context to worker thread
-            # The worker thread is created inside chat() via thread_pool_executor.submit()
-            # Inside that worker thread, get_authorization_context() will be called
-            response = chat(
-                completion_create_params, load_model_result=load_model_result
-            )
-
-            # Verify response is valid
-            assert response is not None
-
-            # Clean up
-            thread_pool_executor, event_loop = load_model_result
-            thread_pool_executor.shutdown(wait=True)
-
-        # Patch get_authorization_context to track calls in worker threads
-        with patch(
-            "datarobot.models.genai.agent.auth.get_authorization_context",
-            side_effect=tracked_get_authorization_context,
-        ):
-            # Spawn multiple threads that call the ACTUAL chat() concurrently
-            threads = []
-            for i, auth_context in enumerate(thread_contexts):
-                thread = threading.Thread(
-                    target=call_chat_in_thread,
-                    args=(i, auth_context),
-                    name=f"test-thread-{i}",
-                )
-                threads.append(thread)
-
-            # Start all threads
-            for thread in threads:
-                thread.start()
-
-            # Wait for all threads to complete
-            for thread in threads:
-                thread.join(timeout=30)
-                assert not thread.is_alive(), f"Thread {thread.name} did not complete"
-
-        # Verify that get_authorization_context was called successfully in worker threads
-        # The worker threads are created inside chat() via thread_pool_executor
-        # We should have at least one worker thread that successfully accessed the context
-        worker_threads_with_context = [
-            thread_id
-            for thread_id, info in context_calls.items()
-            if info.get("successful", False)
-        ]
-
-        assert len(worker_threads_with_context) > 0, (
-            f"At least one worker thread should have successfully accessed the authorization context. "
-            f"Context calls: {context_calls}"
-        )
-
-        # Verify no LookupErrors were raised in worker threads
-        # This is the key assertion - without the fix, we would get LookupError here
-        worker_threads_with_errors = [
-            (thread_id, info["exception"])
-            for thread_id, info in context_calls.items()
-            if info.get("exception") is not None
-        ]
-
-        assert len(worker_threads_with_errors) == 0, (
-            f"Worker threads should not have raised LookupError. "
-            f"This means the fix is working! Errors: {worker_threads_with_errors}"
-        )
-
-        # Verify contexts were actually set (not None)
-        for thread_id, info in context_calls.items():
-            if info.get("successful", False):
-                assert info.get("context_value") is not None, (
-                    f"Worker thread {thread_id} should have a non-None context value"
-                )
-
-        # Verify agent was invoked for each thread
-        assert mock_agent_instance.invoke.call_count == len(thread_contexts), (
-            f"Agent should be invoked once per thread. "
-            f"Expected {len(thread_contexts)}, got {mock_agent_instance.invoke.call_count}"
-        )
-
-    @patch("custom.MyAgent")
-    def test_chat_function_handles_missing_authorization_context(self, mock_agent):
-        """
-        Test that the ACTUAL chat function handles missing authorization context gracefully.
-
-        If authorization context is not set, the function should still work
-        (though MCP tools might not work correctly).
-        """
-        # Set up mocks
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.invoke = AsyncMock(
-            return_value=(
-                "agent result",
-                [],
-                {
-                    "completion_tokens": 1,
-                    "prompt_tokens": 2,
-                    "total_tokens": 3,
-                },
-            )
-        )
-        mock_agent.return_value = mock_agent_instance
-
-        # Create load_model_result
-        load_model_result = load_model("")
-
-        completion_create_params = {
-            "model": "test-model",
-            "messages": [{"role": "user", "content": '{"topic": "test"}'}],
+class TestHeaderForwarding:
+    def test_forwarded_headers_whitelisted(
+        self, mock_agent, load_model_result, completion_params
+    ):
+        mock_class, mock_instance = mock_agent
+        headers = {
+            "x-datarobot-api-key": "secret-key",
+            "x-datarobot-api-token": "secret-token",
+            "x-custom-header": "should-be-filtered",
         }
 
-        # Don't set authorization context - should still work
-        # (though it will catch LookupError and set auth_context to None)
-        response = chat(completion_create_params, load_model_result=load_model_result)
+        with patch("custom.resolve_authorization_context", return_value={}):
+            chat(completion_params, load_model_result, headers=headers)
 
-        # Verify agent was still invoked successfully
-        mock_agent_instance.invoke.assert_called_once()
+        call_kwargs = mock_class.call_args[1]
+        assert "forwarded_headers" in call_kwargs
+        forwarded = call_kwargs["forwarded_headers"]
+        assert forwarded["x-datarobot-api-key"] == "secret-key"
+        assert forwarded["x-datarobot-api-token"] == "secret-token"
+        assert "x-custom-header" not in forwarded
 
-        # Verify response is valid
-        assert response is not None
+    def test_forwarded_headers_case_insensitive(
+        self, mock_agent, load_model_result, completion_params
+    ):
+        header1 = "X-DataRobot-API-Key"
+        header2 = "X-DATAROBOT-API-TOKEN"
 
-        # Clean up
-        thread_pool_executor, event_loop = load_model_result
-        thread_pool_executor.shutdown(wait=True)
+        mock_class, mock_instance = mock_agent
+        headers = {
+            header1: "secret-key",
+            header2: "secret-token",
+        }
+
+        with patch("custom.resolve_authorization_context", return_value={}):
+            chat(completion_params, load_model_result, headers=headers)
+
+        call_kwargs = mock_class.call_args[1]
+        forwarded = call_kwargs["forwarded_headers"]
+        assert len(forwarded) == 2
+        assert header1 in forwarded
+        assert header2 in forwarded
+
+    def test_forwarded_headers_empty_when_no_headers(
+        self, mock_agent, load_model_result, completion_params
+    ):
+        mock_class, mock_instance = mock_agent
+
+        with patch("custom.resolve_authorization_context", return_value={}):
+            chat(completion_params, load_model_result)
+
+        call_kwargs = mock_class.call_args[1]
+        assert "forwarded_headers" in call_kwargs
+        assert call_kwargs["forwarded_headers"] == {}
+
+    def test_forwarded_headers_empty_when_none(
+        self, mock_agent, load_model_result, completion_params
+    ):
+        mock_class, mock_instance = mock_agent
+
+        with patch("custom.resolve_authorization_context", return_value={}):
+            chat(completion_params, load_model_result, headers=None)
+
+        call_kwargs = mock_class.call_args[1]
+        assert "forwarded_headers" in call_kwargs
+        assert call_kwargs["forwarded_headers"] == {}
+
+    def test_only_whitelisted_headers_forwarded(
+        self, mock_agent, load_model_result, completion_params
+    ):
+        mock_class, mock_instance = mock_agent
+        headers = {
+            "Authorization": "Bearer token",
+            "Content-Type": "application/json",
+            "X-Custom": "value",
+        }
+
+        with patch("custom.resolve_authorization_context", return_value={}):
+            chat(completion_params, load_model_result, headers=headers)
+
+        call_kwargs = mock_class.call_args[1]
+        forwarded = call_kwargs["forwarded_headers"]
+        assert len(forwarded) == 0

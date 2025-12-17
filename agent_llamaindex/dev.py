@@ -17,7 +17,7 @@ import os
 
 from datarobot_drum.drum.root_predictors.prediction_server import PredictionServer
 
-from custom_model.config import Config
+from agentic_workflow.config import Config
 
 parser = argparse.ArgumentParser(description="Run the development server")
 parser.add_argument("--autoreload", action="store_true", help="Enable autoreload")
@@ -37,7 +37,7 @@ if __name__ == "__main__":
             "run_language": "python",
             "target_type": "agenticworkflow",
             "deployment_config": None,
-            "__custom_model_path__": "custom_model",
+            "__custom_model_path__": "agentic_workflow",
             "port": port,
         }
     ).materialize()

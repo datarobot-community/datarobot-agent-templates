@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased Changes
 
+## 11.4.0
+- CHECK OUT https://github.com/datarobot-community/datarobot-agent-application FOR THE LATEST UPDATES!
+- Upgrade af-component-agent to latest versions
+- Infrastructure and deployment fixes and improvements
+- Rename `custom_model` to `agentic_workflow` everywhere
+- Upgrade packages and fix CVEs
+- Upgrade template to latest pinned execution environment
+- Upgrade base template and LLM configuration logic
+
+## 11.3.7
+- Fix streaming for NAT agent
+
 ## 11.3.6
 - Upgrade datarobot-genai to bring updated functionality to agents
 - Support pinning pulumi plugins when rate limiting is an issue

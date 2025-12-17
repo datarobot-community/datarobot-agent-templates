@@ -3,29 +3,32 @@
 version: '3'
 vars:
   # Cross-platform environment cleaning - uses 'env -u' on Unix systems, falls back to empty string on Windows
-  CLEAN_PYTHON_ENV:
+  UV_CMD:
     sh: |
+      # This command ensures compatibility with codespaces environments
+      # Cross-platform environment cleaning - uses 'env -u' on Unix systems,
+      # falls back to empty string on Windows
       if command -v env >/dev/null 2>&1; then
-        echo "env -u PYTHONPATH -u VIRTUAL_ENV"
+        echo "env -u PYTHONPATH -u VIRTUAL_ENV uv"
       else
-        echo ""
+        echo "uv"
       fi
 tasks:
   install:
-    desc: 🛠️ [agent_generic_base] Install agent uv dependencies
+    desc: 🛠️ Install agent uv dependencies
     cmds:
       - echo "Updating local dependencies for agent_generic_base"
-      - uv sync --extra dev
+      - "{{.UV_CMD}} sync --extra dev"
       - if [ -f pyproject.toml ] && [ -d docker_context ]; then cp pyproject.toml docker_context/pyproject.toml; fi
       - if [ -f uv.lock ] && [ -d docker_context ]; then cp uv.lock docker_context/uv.lock; fi
     aliases:
       - req
   update:
     # Hidden to avoid showing in task list, run `task --list-all` to see it
-    # desc: 🛠️ [agent_generic_base] Update local dependencies (refresh uv locks)
+    # desc: 🛠️ Update local dependencies (refresh uv locks)
     cmds:
-      - echo "Updating local dependencies"
-      - uv sync --extra dev -U
+      - echo "Updating local dependencies for agent_generic_base"
+      - "{{.UV_CMD}} sync --extra dev -U"
     silent: true
   auth-check:
     silent: true
@@ -39,49 +42,49 @@ tasks:
           echo "ℹ️  Skipping auth check (not available)"
         fi
   add-dependency:
-    desc: 🛠️ [agent_generic_base] Add provided packages as a new dependency to an agent
+    desc: 🛠️ Add provided packages as a new dependency to an agent
     cmds:
       - echo "Adding new dependency for agent_generic_base into 'extras' dependency group"
-      - uv add --no-upgrade --group extras {{.CLI_ARGS}}
+      - "{{.UV_CMD}} add --no-upgrade --group extras {{.CLI_ARGS}}"
     silent: true
   lint:
     # Hidden to avoid showing in task list, run `task --list-all` to see it
-    # desc: 🧹 [agent_generic_base] Lint the codebase
+    # desc: 🧹 Lint the codebase
     cmds:
       - task: req
       - echo "Linting the codebase"
-      - "{{.CLEAN_PYTHON_ENV}} uv run ruff check . --fix"
-      - "{{.CLEAN_PYTHON_ENV}} uv run ruff format ."
-      - "{{.CLEAN_PYTHON_ENV}} uv run mypy --pretty ."
-      - "{{.CLEAN_PYTHON_ENV}} uv run yamlfix custom_model"
+      - "{{.UV_CMD}} run ruff check . --fix"
+      - "{{.UV_CMD}} run ruff format ."
+      - "{{.UV_CMD}} run mypy --pretty ."
+      - "{{.UV_CMD}} run yamlfix agentic_workflow"
     silent: true
   lint-check:
     # Hidden to avoid showing in task list, run `task --list-all` to see it
-    # desc: 🧹 [agent_generic_base] Check whether the codebase is linted
+    # desc: 🧹 Check whether the codebase is linted
     cmds:
       - task: req
       - echo "Checking linting"
-      - "{{.CLEAN_PYTHON_ENV}} uv run ruff format --check --diff ."
-      - "{{.CLEAN_PYTHON_ENV}} uv run ruff check --diff ."
+      - "{{.UV_CMD}} run ruff format --check --diff ."
+      - "{{.UV_CMD}} run ruff check --diff ."
       - echo "Checking type hints"
-      - "{{.CLEAN_PYTHON_ENV}} uv run mypy --pretty ."
+      - "{{.UV_CMD}} run mypy --pretty ."
     silent: true
   test:
     # Hidden to avoid showing in task list, run `task --list-all` to see it
-    # desc: 🧪 [agent_generic_base] Run tests
+    # desc: 🧪 Run tests
     cmds:
       - echo "Running pytest on tests"
-      - "{{.CLEAN_PYTHON_ENV}} uv run pytest -vv ./tests/"
+      - "{{.UV_CMD}} run pytest -vv ./tests/"
     silent: true
   test-coverage:
     # Hidden to avoid showing in task list, run `task --list-all` to see it
-    # desc: 🧪 [agent_generic_base] Run tests with coverage
+    # desc: 🧪 Run tests with coverage
     cmds:
       - echo "Running pytest on tests"
-      - "{{.CLEAN_PYTHON_ENV}} uv run pytest -vv --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml ./tests/"
+      - "{{.UV_CMD}} run pytest -vv --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml ./tests/"
     silent: true
   cli:
-    desc: 🖥️ [agent_generic_base] Run the CLI with provided arguments
+    desc: 🖥️ Run the CLI with provided arguments
     vars:
       START_DEV: "{{.START_DEV}}"
     deps:
@@ -91,23 +94,23 @@ tasks:
       - |
         if [ "{{.START_DEV}}" -eq "1" ]; then
           # Kill any existing dev server processes
-          pkill -f 'uv run python dev.py' 2>/dev/null || true
+          pkill -f '{{.UV_CMD}} run python dev.py' 2>/dev/null || true
 
           # Start dev server in background
           echo "🚀 Starting dev server in background..."
-          {{.CLEAN_PYTHON_ENV}} uv run python dev.py &
+          {{.UV_CMD}} run python dev.py &
           DEV_SERVER_PID=$!
           echo "Dev server started with PID: $DEV_SERVER_PID"
 
           # Wait for server to be ready
           echo "⏳ Waiting for dev server to be ready..."
-          AGENT_ENDPOINT="http://localhost:8842"
+          _AGENT_GENERIC_BASE_ENDPOINT="http://localhost:8842"
           if [ -n "$AGENT_GENERIC_BASE_ENDPOINT" ]; then
-            AGENT_ENDPOINT="$AGENT_GENERIC_BASE_ENDPOINT"
+            _AGENT_GENERIC_BASE_ENDPOINT="$AGENT_GENERIC_BASE_ENDPOINT"
           fi
           i=0
           while [ $i -lt 30 ]; do
-            if curl --silent --fail --max-time 2 "$AGENT_ENDPOINT/" >/dev/null 2>&1; then
+            if curl --silent --fail --max-time 2 "$_AGENT_GENERIC_BASE_ENDPOINT/" >/dev/null 2>&1; then
               echo "✅ Dev server is ready!"
               break
             fi
@@ -115,7 +118,7 @@ tasks:
             i=$((i + 1))
             if [ $i -eq 30 ]; then
               echo "❌ Dev server failed to start within 30 seconds"
-              pkill -f 'uv run python dev.py' 2>/dev/null || true
+              pkill -f '{{.UV_CMD}} run python dev.py' 2>/dev/null || true
               exit 1
             fi
           done
@@ -123,7 +126,7 @@ tasks:
       - |
         # Run CLI and handle cleanup regardless of exit code
         CLI_EXIT_CODE=0
-        {{.CLEAN_PYTHON_ENV}} UV_PROJECT={{.TASKFILE_DIR}} uv run cli.py {{.CLI_ARGS}} || CLI_EXIT_CODE=$?
+        UV_PROJECT={{.TASKFILE_DIR}} {{.UV_CMD}} run cli.py {{.CLI_ARGS}} || CLI_EXIT_CODE=$?
         echo "CLI exited with code: $CLI_EXIT_CODE"
 
         # Check if command failed and contains "execute"
@@ -140,31 +143,31 @@ tasks:
         # Clean up dev server processes if we started them
         if [ "{{.START_DEV}}" -eq "1" ]; then
           echo "🛑 Stopping dev server..."
-          pkill -f 'uv run python dev.py' 2>/dev/null || true
+          pkill -f '{{.UV_CMD}} run python dev.py' 2>/dev/null || true
           echo "✅ Dev server stopped"
         fi
 
         exit $CLI_EXIT_CODE
     silent: true
   dev:
-    desc: 🔨 [agent_generic_base] Run the development server
+    desc: 🔨 Run the development server
     deps:
       - auth-check
     cmds:
-      - "{{.CLEAN_PYTHON_ENV}} uv run python dev.py --autoreload"
+      - "{{.UV_CMD}} run python dev.py --autoreload"
   dev-stop:
-    desc: 🛑 [agent_generic_base] Stop the development server
+    desc: 🛑 Stop the development server
     cmds:
       - echo "Stopping development server"
-      - pkill -f 'uv run python dev.py' 2>/dev/null || echo "No development server process found"
+      - pkill -f '{{.UV_CMD}} run python dev.py' 2>/dev/null || echo "No development server process found"
   chainlit:
     desc: "🛝 Run the ChainLit playground"
     cmds:
       - echo "🛝 Starting ChainLit playground"
-      - uv sync --all-extras
-      - uv run chainlit run --host 0.0.0.0 --port 8083 -w lit.py
+      - "{{.UV_CMD}} sync --all-extras"
+      - "{{.UV_CMD}} run chainlit run --host 0.0.0.0 --port 8083 -w lit.py"
   create-docker-context:
-    desc: 🐳 [agent_generic_base] Create the template for a local docker_context image
+    desc: 🐳 Create the template for a local docker_context image
     vars:
       BRANCH: "{{.BRANCH}}"
     cmds:
@@ -193,13 +196,13 @@ tasks:
       - mv ./docker_context/Dockerfile.local ./docker_context/Dockerfile
       - echo "Docker context created inside agent_generic_base/docker_context"
   build-docker-image:
-    # desc: 🐳 [agent_generic_base] Build the Docker image
+    # desc: 🐳 Build the Docker image
     cmds:
       - echo "Building Docker image"
       - cp pyproject.toml docker_context/pyproject.toml
       - cd docker_context && docker build --platform linux/amd64 -f Dockerfile -t agent_generic_base:latest .
   build-docker-context:
-    desc: 🐳 [agent_generic_base] Build the Docker image
+    desc: 🐳 Build the Docker image
     cmds:
       - task: create-docker-context
       - echo "Saving Docker image"

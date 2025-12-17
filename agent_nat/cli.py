@@ -23,7 +23,7 @@ from openai.types.chat import (
     ChatCompletionChunk,
 )
 
-from custom_model.config import Config
+from agentic_workflow.config import Config
 
 pass_environment = click.make_pass_decorator(AgentEnvironment)
 
@@ -231,6 +231,7 @@ def execute_deployment(
         deployment_id=deployment_id,
         user_prompt=user_prompt,
         completion_json=completion_json,
+        stream=stream,
     )
     if stream:
         display_response_streaming(response)

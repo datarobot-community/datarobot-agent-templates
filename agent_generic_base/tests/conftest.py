@@ -32,8 +32,8 @@ def root_path(tests_path):
 
 
 @pytest.fixture(autouse=True)
-def custom_model_environment(root_path):
-    sys.path.append(os.path.join(root_path, "custom_model"))
+def agentic_workflow_environment(root_path):
+    sys.path.append(os.path.join(root_path, "agentic_workflow"))
 
 
 @pytest.fixture
