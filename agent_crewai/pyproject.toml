@@ -1,57 +1,83 @@
 [project]
+
 name = "agent_crewai"
 version = "0.1.0"
 description = "Implementation of agent_crewai"
 readme = "README.md"
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
-    "datarobot-genai[crewai]>=0.2.11,<0.3.0",
-    "datarobot-moderations>=11.2.4,<11.3.0",
-    "datarobot-drum>=1.17.5,<1.18.0",
-    "datarobot-mlops>=11.1.0",
-    "openai>=1.81.0,<2.0.0",
-    "litellm>=1.72.1,<2.0.0",
-    "langchain-litellm>=0.2.3",
+    "click~=8.1.8",
+    "crewai==0.140.0",
+    "crewai-tools>=0.48.0",
+    "datarobot-drum==1.16.22",
+    "datarobot-moderations==11.2.2",
+    "datarobot-mlops==11.1.0",
+    "datarobot[auth]==3.8.2",
+    "dotenv~=0.9.9",
+    "langchain-community~=0.3.27",
+    "langchain-mcp-adapters~=0.1.9",
+    "langchain~=0.3.23",
+    "langgraph~=0.4.10",
+    "langgraph-prebuilt~=0.2.3",
+    "legacy-cgi~=2.6.3",
+    "litellm~=1.72.1",
+    "llama-index-core~=0.13.0",
+    "llama-index-llms-langchain~=0.7.0",
+    "llama-index-llms-litellm~=0.6.0",
+    "llama-index-llms-openai~=0.5.0",
+    "llama-index~=0.13.0",
+    "mcp>=1.11.0",
+    "multidict~=6.5.0",
+    "onnxruntime~=1.22.0",
+    "openai>=1.76.2",
     "opentelemetry-api>=1.33.0,<2.0.0",
-    "opentelemetry-sdk>=1.33.0,<2.0.0",
-
-    "pdfminer.six>=20251107",  # CVE fix
-    "langgraph-checkpoint>=3.0.0", # CVE fix
+    "opentelemetry-instrumentation-aiohttp-client>=0.54b0",
+    "opentelemetry-instrumentation-crewai>=0.40.5",
+    "opentelemetry-instrumentation-httpx>=0.54b0",
+    "opentelemetry-instrumentation-langchain>=0.40.5",
+    "opentelemetry-instrumentation-llamaindex>=0.40.5",
+    "opentelemetry-instrumentation-openai>=0.40.5",
+    "opentelemetry-instrumentation-requests>=0.54b0",
+    "opentelemetry-sdk>=1.33.0",
+    "python-dotenv~=1.1.0",
+    "ragas @ git+https://github.com/explodinggradients/ragas@5d59549ad5ef511f621502c563bc55ac5aeb9188#subdirectory=ragas",
+    # pyarrow==21.0.0 breaks the current ragas version https://github.com/apache/arrow/issues/47155
+    "pyarrow<21.0.0",
+    "requests~=2.32.4",
+    "traceloop-sdk~=0.40.2",
+    "uvicorn~=0.35.0",
+    # CVE fixes
+    "starlette~=0.49.1",
+    "langchain-core~=0.3.80",
+    "langchain-text-splitters~=0.3.9",
+    "h2~=4.3.0",
+    "pdfminer.six>=20251107",
+    "langgraph-checkpoint~=3.0.0",
+    "aiohttp~=3.12.14",
+    "pypdf~=6.4.0",
+]
+exclude-dependencies = [
+    "uv",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=1.15.0",
+    "mypy~=1.15.0",
     "pre-commit>=4.2.0",
     "pydantic>=2.6.1",
     "pytest-cov>=6.1.1",
     "pytest>=7.4.0",
-    "pytest-asyncio>=1.2.0",
     "requests-mock>=1.12.1",
-    "ruff>=0.12.0",
-    "types-requests>=2.32.4.20250913",
+    "ruff~=0.12.0",
     "yamlfix>=1.17.0",
-]
-chainlit = [
-    "chainlit>=2.9.0",
-]
-# Additional dependencies required to run the agent in DataRobot Agentic playground
-agentic_playground = [
-    "fastapi[All]==0.118.2",
-    "psutil==5.9.8",
-    "ipykernel<6.29.0",
-    "jupyter-client>=8.6.3",
-    "jupyter-core>=5.8.1",
-    "jupyter-kernel-gateway>=3.0.1",
-    "ecs-logging>=2.2.0",
+    "types-requests~=2.32.4",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-pythonpath = ["agentic_workflow"]
-asyncio_mode = "auto"
+pythonpath = ["custom_model"]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -137,10 +163,13 @@ docstring-code-line-length = "dynamic"
 allow_duplicate_keys = true
 line_length = 120
 
+# Pydantic plugin must be disabled with llamaindex, see https://github.com/python/mypy/issues/15927
 [tool.mypy]
 strict = true
 python_version = "3.11"
+
 plugins = "pydantic.mypy"
+
 exclude = """(?x)(
     output/ # exclude files starting with "output"
     | deployment_.*/
@@ -159,7 +188,6 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_decorators = true
 disallow_untyped_defs = true
-disable_error_code = ["typeddict-unknown-key"]
 enable_error_code = "ignore-without-code"
 implicit_reexport = true
 ignore_missing_imports = true
@@ -173,18 +201,3 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = "datarobot.*"
 implicit_reexport = true
-
-[tool.uv]
-required-version = ">=0.7.0"
-override-dependencies = [
-    "fastapi>=0.118.2,<0.122.0",
-    "ragas>=0.3.8",
-    "starlette>=0.49.1",
-]
-
-# This can be set to allow for proxy indexes in air-gapped environments
-# [tool.uv.pip]
-# extra-index-url = ["https://pypi.org/simple/"]
-
-[dependency-groups]
-extras = []
