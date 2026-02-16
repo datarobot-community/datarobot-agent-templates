@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.1.2
+- Fixes to release 11.1 branch
+
 ## 11.1.1
 
 - Upgrade starlette, llama-index and pin all other libraries
