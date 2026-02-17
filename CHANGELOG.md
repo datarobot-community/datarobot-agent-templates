@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.1.3
+- Fix 11.1 quickstart
+
 ## 11.1.2
 - Fixes to release 11.1 branch
 
