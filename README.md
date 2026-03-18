@@ -346,7 +346,7 @@ See the following documentation for more details:
 - [Use the agent CLI](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-cli-guide.html)
 - [Add Python requirements](https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/agentic-python-packages.html)
 
-## Agent-to-agent
+## Agent2Agent
 
 Template agents can expose themselves as agent-to-agent (A2A) servers and connect to remote agents via the agent-to-agent protocol.
 
@@ -360,7 +360,7 @@ To connect an agent via A2A to a remote agent:
 - Uncomment the `function_groups` and `workflow.tool_names` blocks in the `workflow.yaml` file.
 - Run the agent with the experimental dragent front server: set `ENABLE_DRAGENT_SERVER=true` in your `.env` file.
 
-Enable **ENABLE_RUNTIME_PARAMETERS_IMPROVEMENTS** to use environment variables in the `workflow.yaml` files.
+Enable the **ENABLE_RUNTIME_PARAMETERS_IMPROVEMENTS** feature flag in DataRobot to use environment variables in the `workflow.yaml` files.
 
 ### Agent cards and DataRobot deployments
 
@@ -369,15 +369,6 @@ When the `ENABLE_GENAI_AGENT_TO_AGENT_SUPPORT` feature flag is enabled and you d
 - **List deployments with agent cards:** `GET deployments/?isA2AAgent=true`
 - **Retrieve an agent card:** `GET deployments/<deployment_id>/agentCard`
 
-Both API routes have corresponding methods in the Python client:
-
-```python
-deployments = dr.Deployment.list(filters=DeploymentListFilters(is_a2a_agent=True))
-agent_card = deployment.get_agent_card()
-# Only available for external deployments
-deployment.upload_agent_card(agent_card)
-deployment.delete_agent_card()
-```
 
 ### A2A agents hosted outside of DataRobot
 
@@ -389,6 +380,14 @@ For A2A agents hosted outside of DataRobot:
 
 For external deployments, you can also remove the agent card with `DELETE deployments/<deployment_id>/agentCard`.
 
+The API routes have corresponding methods in the Python client:
+
+```python
+deployments = dr.Deployment.list(filters=DeploymentListFilters(is_a2a_agent=True))
+agent_card = deployment.get_agent_card()
+# Only available for external deployments
+deployment.upload_agent_card(agent_card)
+deployment.delete_agent_card()
 # Get help
 
 If you encounter issues or have questions, try the following:
