@@ -16,9 +16,10 @@ import re
 from typing import Any, Optional, Union
 
 from crewai import LLM, Agent, Crew, CrewOutput, Task
-from helpers import CrewAIEventListener, create_inputs_from_completion_params
 from openai.types.chat import CompletionCreateParams
 from ragas.messages import AIMessage
+
+from helpers import CrewAIEventListener, create_inputs_from_completion_params
 
 
 class MyAgent:

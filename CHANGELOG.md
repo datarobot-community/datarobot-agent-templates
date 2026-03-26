@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.1.4
+- Support for offline environments.
+- Preinstall Pulumi/Task in execution env.
+- Download required Pulumi plugins and include them in execution env.
+- Cache all component dependencies in UV cache and install them in runtime.
+- Fix linting issues.
+- Reorganize tasks between Taskfiles.
+
 ## 11.1.3
 - Fix 11.1 quickstart
 

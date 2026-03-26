@@ -121,9 +121,7 @@ if len(os.environ.get("DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT", "")) > 0:
         )
 else:
     agent_llamaindex_exec_env_use_cases = ["customModel", "notebook"]
-    if os.path.exists(
-        os.path.join(str(agent_llamaindex_application_path), "docker_context.tar.gz")
-    ):
+    if os.path.exists(os.path.join(str(project_dir.parent), "docker_context.tar.gz")):
         pulumi.info(
             "Using prebuilt Dockerfile docker_context.tar.gz to run the execution environment"
         )
@@ -133,9 +131,7 @@ else:
             name=agent_llamaindex_asset_name,
             description="Execution Environment for " + agent_llamaindex_asset_name,
             programming_language="python",
-            docker_image=os.path.join(
-                str(agent_llamaindex_application_path), "docker_context.tar.gz"
-            ),
+            docker_image=os.path.join(str(project_dir.parent), "docker_context.tar.gz"),
             use_cases=agent_llamaindex_exec_env_use_cases,
         )
     else:
@@ -146,9 +142,7 @@ else:
             name=agent_llamaindex_asset_name,
             description="Execution Environment for " + agent_llamaindex_asset_name,
             programming_language="python",
-            docker_context_path=os.path.join(
-                str(agent_llamaindex_application_path), "docker_context"
-            ),
+            docker_context_path=os.path.join(str(project_dir.parent), "docker_context"),
             use_cases=agent_llamaindex_exec_env_use_cases,
         )
 
@@ -184,7 +178,9 @@ agent_llamaindex_custom_model = pulumi_datarobot.CustomModel(
 )
 
 agent_llamaindex_custom_model_endpoint = agent_llamaindex_custom_model.id.apply(
-    lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/genai/agents/fromCustomModel/{id}/chat/"
+    lambda id: (
+        f"{os.getenv('DATAROBOT_ENDPOINT')}/genai/agents/fromCustomModel/{id}/chat/"
+    )
 )
 
 agent_llamaindex_playground = pulumi_datarobot.Playground(
@@ -285,7 +281,9 @@ if os.environ.get("AGENT_DEPLOY") != "0":
         lambda id: f"{id}"
     )
     agent_llamaindex_deployment_endpoint = agent_llamaindex_agent_deployment.id.apply(
-        lambda id: f"{os.getenv('DATAROBOT_ENDPOINT')}/deployments/{id}/chat/completions"
+        lambda id: (
+            f"{os.getenv('DATAROBOT_ENDPOINT')}/deployments/{id}/chat/completions"
+        )
     )
 
     pulumi.export(

@@ -1,0 +1,14 @@
+# This file is used to generate the requirements.txt file for the Docker image.
+setuptools
+ecs-logging
+jupyter-client
+jupyter_kernel_gateway
+jupyter_core>=5.8.1
+ipykernel<6.29.0
+pandas
+numpy
+mistune
+numpy
+uwsgi
+fastapi[All]>=0.122.0
+psutil>=7.0.0

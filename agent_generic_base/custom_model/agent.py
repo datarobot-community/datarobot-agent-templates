@@ -15,8 +15,9 @@ import os
 import re
 from typing import Any, Optional, Union
 
-from helpers import create_inputs_from_completion_params
 from openai.types.chat import CompletionCreateParams
+
+from helpers import create_inputs_from_completion_params
 
 
 class MyAgent:

@@ -132,57 +132,58 @@ This is only a small subset of the available commands to get you started. It is 
 the [Agent Development Documentation](./agent_generic_base/README.md) to get a full understanding of the available
 commands and the process of developing your agent.
 
-## Adding python packages to Agent or Execution Environments
+## Adding Python packages to Agent or Execution Environments
 
-You can add additional Python packages to any agent execution environment, however a few steps are required to ensure
-that all the environments are properly synchronized. There are two different methods for adding packages. **If you
-want to be able to run the agent anywhere, it is recommended that you create an updated Execution Environment**
+Agentic template dependencies are installed dynamically at runtime, which gives you a lot of flexibility in setup.
+However, this also means a prolonged agent start time and requires connectivity to package indexes. For simple experimentation,
+just modifying dependencies via `uv` is enough. **For cases where there are plenty of dependency changes, the setup is
+offline (no access to external package indexes like PyPI), and to reduce dynamic installation time - it is recommended
+that you create an updated Execution Environment.**
 
-### Execution Environment Requirements
-This approach will allow you to add packages to your agent and use all the development pipelines fully. It is 
-slightly more complex than the second method but is generally the recommended approach for most use cases.
+### Updating dependencies
+Use `uv` to add/modify dependencies as you see fit. Modifying `pyproject.toml` is another
+way to modify dependencies, but please ensure that `uv.lock` is regenerated accordingly.
 
-1. In your `.env` file ensure that `DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT` is unset, or you can delete it completely.
-2. Navigate to your agent and use uv to add the new package to the agent project environment:
-```bash
-  cd agent_generic_base  # or your chosen agent directory
-  uv add <package_name>
-```
-3. Navigate to the `docker_context` directory in your agent and open the `requirements.in` file:
-```bash
- # The full path is `agent_generic_base/docker_context`, `agent_crewai/docker_context`, etc.
- cd docker_context  # or your chosen agent directory
- open requirements.in  # or use your preferred editor (code, nano, vim, etc.)
-```
-4. Add your new package to the `requirements.in` file. For example, if you added `requests` in step 2:
-```plaintext
-requests  # You can optionally specify a minimum version here, e.g., requests>=2.25.1
-```
-5. Save the `requirements.in` file and run the following command to update the `requirements.txt`:
-```bash
-  uv pip compile --no-annotate --no-emit-index-url --output-file=requirements.txt requirements.in
-````
-
-You can manually test building your agent image by running the following, this will help you ensure the new dependency can be added:
-```bash
-  docker build -f Dockerfile . -t docker_context_test
-```
-
-After completing these steps, when you run `task build` or `task deploy`, the new environment will be automatically
-built the first time. Subsequent builds will use the cached environment if the requirements have not changed. The new
-environment will be automatically linked and used for all your agent components, models, and deployments.
-
-> **Note:** It is recommended that you do not remove any packages from the `pyproject.toml` or `requirements.in` files
+> **Note:** It is recommended that you do not remove any packages from the `pyproject.toml`
 > unless you are absolutely sure they are no longer needed. Removing packages may lead to unexpected behavior with
 > playground or deployment interactions, even if the local execution environment works correctly.
 
-### Custom Model Requirements
-The second and simplest way is to add your package to the `custom_model/requirements.txt` file. This will allow you to
-locally test the agent with the new package. This will also carry through to deployments of the agent.
-> **Note:** Using this method may not work properly with all integrated application templates and interacting
-> with a **Custom Model** through the **GenAI Playground** is not supported in this flow. These requirements are
-> only supported by fully deployed models.
+1. Navigate to your agent.
+```bash
+  cd agent_generic_base  # or your chosen agent directory
+```
+2. Add the new package:
+```bash
+  uv add <package_name>
+```
+3. Upgrade existing package:
+```bash
+  uv lock --upgrade-package <package_name>
+```
 
+> **Note:** The Execution Environment locks dependencies by setting `UV_FROZEN=1`. If you are using Codespace to build
+> your agent, you might need to explicitly set `UV_FROZEN=0` before updating dependencies to enable dependency updates.
+
+### Building an Execution Environment
+When a custom execution environment is built, all agentic template dependencies are collected and pre-cached, which
+helps to greatly reduce agent startup time and allows you to use this execution environment in setups with restricted
+network access.
+
+You can use development pipelines to update/build an execution environment on the platform. To do this:
+1. In your `.env` file ensure that `DATAROBOT_DEFAULT_EXECUTION_ENVIRONMENT` is unset, or you can delete it completely.
+2. Trigger the agentic template build via Task:
+```bash
+  task build
+```
+
+Development pipelines can be used to create an execution environment only if the DataRobot installation
+has access to package indexes. If that's not the case and the DataRobot installation is offline, you will need to
+manually build an execution environment on an online host and upload a prebuilt image to DataRobot.
+
+To manually build an execution environment, simply run the following:
+```bash
+  task execenv:build IMAGE_NAME=<image_name> IMAGE_TAG=<image_tag>
+```
 
 ## Using a DataRobot Deployment as an LLM
 _This method can also be used to dynamically pass any variable between pulumi deployments. The dependencies will

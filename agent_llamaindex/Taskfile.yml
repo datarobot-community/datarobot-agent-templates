@@ -8,7 +8,7 @@ tasks:
     desc: 🛠️ [agent_llamaindex] Update local dependencies
     cmds:
       - echo "Updating local dependencies"
-      - uv sync --all-extras
+      - uv sync --frozen
     silent: true
     aliases:
       - req
@@ -16,7 +16,7 @@ tasks:
     desc: 🛠️ [agent_llamaindex] Update local dependencies (refresh uv locks)
     cmds:
       - echo "Updating local dependencies"
-      - uv sync --all-extras -U
+      - uv sync --upgrade
     silent: true
   lint:
     desc: 🧹 [agent_llamaindex] Lint the codebase
@@ -25,7 +25,7 @@ tasks:
       - echo "Linting the codebase"
       - "{{.CLEAN_PYTHON_ENV}} uv run ruff check . --fix"
       - "{{.CLEAN_PYTHON_ENV}} uv run ruff format ."
-      - "{{.CLEAN_PYTHON_ENV}} uv run mypy --pretty --install-types ."
+      - "{{.CLEAN_PYTHON_ENV}} uv run mypy --pretty ."
       - "{{.CLEAN_PYTHON_ENV}} uv run yamlfix custom_model"
     silent: true
   lint-check:
@@ -64,13 +64,3 @@ tasks:
       - echo "Running development server on http://localhost:8842"
       - "{{.CLEAN_PYTHON_ENV}} uv run drum server -cd custom_model --address localhost:8842 --target-type agenticworkflow"
       - wait
-  build-docker:
-    desc: 🐳 [agent_llamaindex] Build the Docker image
-    cmds:
-      - echo "Compiling requirements for Docker"
-      - cd docker_context && uv pip compile --python-version 3.11 --universal --no-annotate --no-emit-index-url --output-file=requirements.txt requirements.in
-      - echo "Building Docker image"
-      - cd docker_context && docker build --platform linux/amd64 -f Dockerfile -t agent_llamaindex:latest .
-      - echo "Saving Docker image"
-      - docker save agent_llamaindex:latest | gzip > docker_context.tar.gz
-    silent: true

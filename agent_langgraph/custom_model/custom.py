@@ -20,14 +20,15 @@ os.environ["RAGAS_DO_NOT_TRACK"] = "true"
 os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
 # isort: on
 
+from datarobot_drum import RuntimeParameters
+from openai.types.chat import CompletionCreateParams
+
 from agent import MyAgent
 from auth import initialize_authorization_context
-from datarobot_drum import RuntimeParameters
 from helpers import (
     CustomModelChatResponse,
     to_custom_model_response,
 )
-from openai.types.chat import CompletionCreateParams
 
 
 def maybe_set_env_from_runtime_parameters(key: str) -> None:

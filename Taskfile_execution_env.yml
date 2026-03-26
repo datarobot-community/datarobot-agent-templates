@@ -1,0 +1,35 @@
+---
+# https://taskfile.dev
+version: '3'
+tasks:
+  update-context:
+    desc: "🐳 [docker] Update docker context with up-to-date project requirements files to build image."
+    vars:
+      CONTEXT_DIR: '{{.AGENT_PATH | default "docker_context"}}'
+      COMPONENTS: '{{.COMPONENTS | default "agent_crewai agent_generic_base agent_langgraph agent_llamaindex infra"}}'
+    cmds:
+      - echo "✍️ Cleaning up previous data"
+      - rm -rf {{.CONTEXT_DIR}}/app_components
+      # Export project skeleton (toml/lock files, needed for `uv sync` to work)
+      - echo "✍️ Exporting toml/lock files to {{.CONTEXT_DIR}}/app_components/"
+      - mkdir -p {{.CONTEXT_DIR}}/app_components/base/
+      - cp -v pyproject.toml uv.lock {{.CONTEXT_DIR}}/app_components/base/
+      - for: { var: COMPONENTS }
+        cmd: mkdir -p {{.CONTEXT_DIR}}/app_components/{{.ITEM}} && cp -v {{.ITEM}}/pyproject.toml {{.ITEM}}/uv.lock {{.CONTEXT_DIR}}/app_components/{{.ITEM}}/
+    silent: true
+  build:
+    desc: "🐳 [docker] Build the execution env Docker image"
+    vars:
+      IMAGE_NAME: '{{.IMAGE_NAME | default "agentic_execution_env"}}'
+      IMAGE_TAG: '{{.IMAGE_TAG | default "latest"}}'
+      SAVE_IMAGE: '{{.SAVE_IMAGE | default "false"}}'
+    cmds:
+      - defer: rm -rf docker_context/app_components
+      - task: update-context
+      - echo "Building Docker image"
+      - cd docker_context && docker build --platform linux/amd64 -f Dockerfile -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
+      - cmd: |
+          echo "Saving Docker image"
+          docker save {{.IMAGE_NAME}}:{{.IMAGE_TAG}} | gzip > docker_context.tar.gz
+        if: '{{eq .SAVE_IMAGE "true"}}'
+    silent: true

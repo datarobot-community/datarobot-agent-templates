@@ -16,14 +16,15 @@ import re
 from datetime import datetime
 from typing import Any, Optional, Union
 
-from helpers import create_inputs_from_completion_params
-from langchain_community.chat_models import ChatLiteLLM
-from langchain_core.messages import HumanMessage
+from langchain.agents import AgentState, create_agent
+from langchain.messages import HumanMessage
+from langchain_litellm import ChatLiteLLM
 from langgraph.graph import END, START, MessagesState, StateGraph
-from langgraph.graph.state import CompiledGraph, CompiledStateGraph
-from langgraph.prebuilt import create_react_agent
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 from openai.types.chat import CompletionCreateParams
+
+from helpers import create_inputs_from_completion_params
 
 
 class MyAgent:
@@ -135,11 +136,11 @@ class MyAgent:
         )
 
     @property
-    def agent_planner(self) -> CompiledGraph:
-        return create_react_agent(
+    def agent_planner(self) -> CompiledStateGraph[AgentState, Any, Any, Any]:
+        return create_agent(
             self.llm,
             tools=[],
-            prompt=self.make_system_prompt(
+            system_prompt=self.make_system_prompt(
                 "You are a content planner. You are working with an content writer and editor colleague."
                 "\n"
                 "You're working on planning a blog article "
@@ -166,11 +167,11 @@ class MyAgent:
         )
 
     @property
-    def agent_writer(self) -> CompiledGraph:
-        return create_react_agent(
+    def agent_writer(self) -> CompiledStateGraph[AgentState, Any, Any, Any]:
+        return create_agent(
             self.llm,
             tools=[],
-            prompt=self.make_system_prompt(
+            system_prompt=self.make_system_prompt(
                 "You are a content writer. You are working with an planner and editor colleague."
                 "\n"
                 "You're working on writing "
@@ -208,11 +209,11 @@ class MyAgent:
         )
 
     @property
-    def agent_editor(self) -> CompiledGraph:
-        return create_react_agent(
+    def agent_editor(self) -> CompiledStateGraph[AgentState, Any, Any, Any]:
+        return create_agent(
             self.llm,
             tools=[],
-            prompt=self.make_system_prompt(
+            system_prompt=self.make_system_prompt(
                 "You are a content editor. You are working with an planner and writer colleague."
                 "\n"
                 "You are an editor who receives a blog post "
@@ -274,7 +275,7 @@ class MyAgent:
             goto=END,
         )
 
-    def graph(self) -> CompiledStateGraph:
+    def graph(self) -> CompiledStateGraph[MessagesState, Any, Any, Any]:
         workflow = StateGraph(MessagesState)
         workflow.add_node("planner_node", self.task_plan)
         workflow.add_node("writer_node", self.task_write)

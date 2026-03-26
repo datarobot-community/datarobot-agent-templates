@@ -75,6 +75,8 @@ class CrewAIEventListener(BaseEventListener):  # type: ignore[misc]
                 )
                 return
             tool_call = ToolCall(name=event.tool_name, args=json.loads(event.tool_args))
+            if last_message.tool_calls is None:
+                last_message.tool_calls = []
             last_message.tool_calls.append(tool_call)
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)  # type: ignore[misc]

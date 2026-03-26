@@ -1,12 +1,19 @@
 ---
 # https://taskfile.dev
 version: '3'
-vars:
-  CLEAN_PYTHON_ENV: env -u PYTHONPATH -u VIRTUAL_ENV
 includes:
   agent:
     taskfile: ./agent_crewai/Taskfile.yml
     dir: ./agent_crewai
+  execenv:
+    taskfile: ./Taskfile_execution_env.yml
+    dir: .
+    vars:
+      COMPONENTS: agent_crewai infra
+  infra:
+    taskfile: ./infra/Taskfile.yml
+    dir: ./infra
+    internal: true
 tasks:
   default:
     desc: "🗒️ Show all available tasks"
@@ -19,36 +26,38 @@ tasks:
       - echo "Updating agent environment"
       - task: agent:req
       - echo "Updating infra environment"
-      - cd ./infra && uv sync --all-extras
+      - task: infra:req
     silent: true
     aliases:
       - setup
       - req
+  update:
+    desc: "🏗️ [agent_crewai] Update all dependencies for the agent and infra (refresh uv locks)"
+    cmds:
+      - echo "Updating dependencies for an agent"
+      - task: agent:update
+      - echo "Updating infra dependencies"
+      - task: infra:update
+    silent: true
+    aliases:
+      - update-all
   build:
     desc: "🔵 [agent_crewai] Run Pulumi up in [BUILD] mode"
-    env:
-      AGENT_DEPLOY: 0
     cmds:
-      - echo "Running pulumi up with [BUILD] mode"
-      - "cd ./infra && {{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+      - task: infra:build
     silent: true
   deploy:
     desc: "🟢 [agent_crewai] Run Pulumi up in [DEPLOY] mode"
-    env:
-      AGENT_DEPLOY: 1
     cmds:
-      - echo "Running pulumi up with [DEPLOY] mode"
-      - "cd ./infra && {{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+      - task: infra:deploy
     silent: true
   refresh:
     desc: "⚪️ [agent_crewai] Run Pulumi refresh"
     cmds:
-      - echo "Running pulumi refresh"
-      - "cd ./infra && {{.CLEAN_PYTHON_ENV}} uv run pulumi refresh {{.CLI_ARGS}}"
+      - task: infra:refresh
     silent: true
   destroy:
     desc: "🔴 [agent_crewai] Run Pulumi destroy"
     cmds:
-      - echo "Running pulumi destroy"
-      - "cd ./infra && {{.CLEAN_PYTHON_ENV}} uv run pulumi destroy {{.CLI_ARGS}}"
+      - task: infra:destroy
     silent: true

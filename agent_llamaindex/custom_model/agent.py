@@ -16,7 +16,6 @@ import os
 import re
 from typing import Any, Optional, Sequence, Tuple, Union
 
-from helpers import create_inputs_from_completion_params
 from llama_index.core.agent.workflow import (
     AgentInput,
     AgentOutput,
@@ -30,6 +29,8 @@ from llama_index.core.base.llms.types import LLMMetadata
 from llama_index.core.workflow import Context, Event
 from llama_index.llms.litellm import LiteLLM
 from openai.types.chat import CompletionCreateParams
+
+from helpers import create_inputs_from_completion_params
 
 
 class DataRobotLiteLLM(LiteLLM):  # type: ignore[misc]
