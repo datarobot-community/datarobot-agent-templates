@@ -1,14 +1,14 @@
 [project]
 name = "datarobot-agents-templates"
-version = "11.4.1"
+version = "11.1.8"
 description = """
 This is a template for DataRobot Agents.
 """
 requires-python = ">=3.10"
 
 dependencies = [
-    "dotenv>=0.9.9",
-    "pytest>=8.4.2",
-    "pyyaml>=6.0.3",
-    "ruff>=0.14.0",
 ]
+
+[tool.uv]
+required-version = ">=0.10.0"
+constraint-dependencies = []

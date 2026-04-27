@@ -1,0 +1,70 @@
+---
+# https://taskfile.dev
+version: '3'
+vars:
+  CLEAN_PYTHON_ENV: env -u PYTHONPATH -u VIRTUAL_ENV
+tasks:
+  install:
+    desc: 🛠️ [infra] Update local dependencies
+    cmds:
+      - echo "Updating local dependencies"
+      - uv sync --frozen
+    silent: true
+    aliases:
+      - req
+  update:
+    desc: 🛠️ [infra] Update local dependencies (refresh uv locks)
+    cmds:
+      - echo "Updating local dependencies"
+      - uv sync --upgrade
+    silent: true
+  lint:
+    desc: 🧹 [infra] Lint the codebase
+    cmds:
+      - task: req
+      - echo "Linting infra codebase"
+      - "{{.CLEAN_PYTHON_ENV}} uv run ruff check . --fix"
+      - "{{.CLEAN_PYTHON_ENV}} uv run ruff format ."
+    silent: true
+  ensure-pulumi-plugins:
+    desc: "Install Pulumi plugins manually from cache in an offline environment"
+    internal: true
+    status:
+      # Skip manual installation of pulumi plugins if there is no dir with cached plugins.
+      - '{{ eq (.PULUMI_PLUGIN_CACHE_DIR | default "") "" }}'
+    cmds:
+      - echo "Installing pulumi plugins from {{.PULUMI_PLUGIN_CACHE_DIR}}"
+      - |
+        for f in $(ls {{.PULUMI_PLUGIN_CACHE_DIR}}); do
+          pulumi plugin install $(echo $f | cut -d"-" -O " " -f2,3,4) --file {{.PULUMI_PLUGIN_CACHE_DIR}}/$f;
+        done
+    silent: true
+  build:
+    desc: "🔵 [infra] Run Pulumi up in [BUILD] mode"
+    env:
+      AGENT_DEPLOY: 0
+    cmds:
+      - task: ensure-pulumi-plugins
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+    silent: true
+  deploy:
+    desc: "🟢 [infra] Run Pulumi up in [DEPLOY] mode"
+    env:
+      AGENT_DEPLOY: 1
+    cmds:
+      - task: ensure-pulumi-plugins
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi up {{.CLI_ARGS}}"
+    silent: true
+  refresh:
+    desc: "⚪️ [infra] Run Pulumi refresh"
+    cmds:
+      - task: ensure-pulumi-plugins
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi refresh {{.CLI_ARGS}}"
+    silent: true
+  destroy:
+    desc: "🔴 [infra] Run Pulumi destroy"
+    cmds:
+      - task: ensure-pulumi-plugins
+      - "{{.CLEAN_PYTHON_ENV}} uv run pulumi destroy {{.CLI_ARGS}}"
+    silent: true
+
