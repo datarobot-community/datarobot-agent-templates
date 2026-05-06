@@ -108,7 +108,7 @@ jobs:
       - name: Test
         run: uv run pytest --cov --cov-report=html --cov-report=term --cov-report xml:.coverage.xml
       - name: Get Cover
-        uses: orgoro/coverage@v3.2
+        uses: orgoro/coverage@v3.3
         with:
           coverageFile: agent_generic_base/.coverage.xml
           token: ${{ secrets.GITHUB_TOKEN }}
