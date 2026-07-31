@@ -1,6 +1,6 @@
 [project]
 name = "infra"
-version = "11.1.4"
+version = "11.1.8"
 description = """
 This is a template for DataRobot Agents.
 """
@@ -16,7 +16,11 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest-cov>=6.1.1",
-    "pytest>=7.4.0",
+    "pytest>=9.0.3",
     "mypy>=1.8.0",
     "ruff>=0.3.0",
 ]
+
+[tool.uv]
+required-version = ">=0.10.0"
+constraint-dependencies = []

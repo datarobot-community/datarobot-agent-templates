@@ -21,4 +21,4 @@ instrument_requests = RequestsInstrumentor().instrument()
 instrument_aiohttp = AioHttpClientInstrumentor().instrument()
 instrument_httpx = HTTPXClientInstrumentor().instrument()
 instrument_openai = OpenAIInstrumentor().instrument()
-instrument_langchain = LangchainInstrumentor().instrument()  # type: ignore[no-untyped-call]
+instrument_langchain = LangchainInstrumentor().instrument()

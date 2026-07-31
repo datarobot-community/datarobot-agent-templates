@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 11.1.8
+- CVE fixes.
+
 ## 11.1.4
 - Support for offline environments.
 - Preinstall Pulumi/Task in execution env.

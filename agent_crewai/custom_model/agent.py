@@ -16,6 +16,7 @@ import re
 from typing import Any, Optional, Union
 
 from crewai import LLM, Agent, Crew, CrewOutput, Task
+from crewai.events import crewai_event_bus
 from openai.types.chat import CompletionCreateParams
 from ragas.messages import AIMessage
 
@@ -65,7 +66,6 @@ class MyAgent:
             self.verbose = verbose.lower() == "true"
         elif isinstance(verbose, bool):
             self.verbose = verbose
-        self.event_listener = CrewAIEventListener()
 
     @property
     def api_base_litellm(self) -> str:
@@ -94,6 +94,7 @@ class MyAgent:
             api_base=self.api_base_litellm,
             api_key=self.api_key,
             timeout=self.timeout,
+            stream=False,
         )
 
     @property
@@ -111,6 +112,7 @@ class MyAgent:
             api_base=deployment_url,
             api_key=self.api_key,
             timeout=self.timeout,
+            stream=False,
         )
 
     @property
@@ -239,6 +241,7 @@ class MyAgent:
             agents=[self.agent_planner, self.agent_writer, self.agent_editor],
             tasks=[self.task_plan, self.task_write, self.task_edit],
             verbose=self.verbose,
+            stream=False,
         )
 
     def run(
@@ -271,14 +274,19 @@ class MyAgent:
         # Print commands may need flush=True to ensure they are displayed in real-time.
         print("Running agent with inputs:", inputs, flush=True)
 
-        # Run the crew with the inputs
-        crew_output = self.crew().kickoff(inputs=inputs)
+        # Run the crew with the inputs, scoping event handlers to this execution
+        # to prevent handler accumulation across requests
+        with crewai_event_bus.scoped_handlers():
+            event_listener = CrewAIEventListener()
+            event_listener.setup_listeners(crewai_event_bus)
+            crew_output = self.crew().kickoff(inputs=inputs)
+            events: list[Any] = event_listener.messages
 
         # Extract the response text from the crew output
+        if not isinstance(crew_output, CrewOutput):
+            raise TypeError("Expected CrewOutput. Please ensure streaming is disabled.")
         response_text = str(crew_output.raw)
 
-        # Create a list of events from the event listener
-        events: list[Any] = self.event_listener.messages
         if len(events) > 0:
             last_message = events[-1].content
             if last_message != response_text:

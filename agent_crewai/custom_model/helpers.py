@@ -18,15 +18,14 @@ import uuid
 from typing import Any, Union
 
 from crewai import CrewOutput
-from crewai.utilities.events import (
+from crewai.events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
-    CrewAIEventsBus,
     CrewKickoffStartedEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.events.event_bus import CrewAIEventsBus
 from openai.types import CompletionUsage
 from openai.types.chat import (
     ChatCompletion,
@@ -38,32 +37,27 @@ from ragas import MultiTurnSample
 from ragas.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
 
 
-class CrewAIEventListener(BaseEventListener):  # type: ignore[misc]
+class CrewAIEventListener:
     def __init__(self) -> None:
-        super().__init__()
         self.messages: list[Union[HumanMessage, AIMessage, ToolMessage]] = []
 
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
-        @crewai_event_bus.on(CrewKickoffStartedEvent)  # type: ignore[misc]
-        def on_crew_execution_started(_: Any, event: CrewKickoffStartedEvent) -> None:
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_execution_started(_: Any, event: Any) -> None:
             self.messages.append(
                 HumanMessage(content=f"Working on input '{json.dumps(event.inputs)}'")
             )
 
-        @crewai_event_bus.on(AgentExecutionStartedEvent)  # type: ignore[misc]
-        def on_agent_execution_started(
-            _: Any, event: AgentExecutionStartedEvent
-        ) -> None:
+        @crewai_event_bus.on(AgentExecutionStartedEvent)
+        def on_agent_execution_started(_: Any, event: Any) -> None:
             self.messages.append(AIMessage(content=event.task_prompt, tool_calls=[]))
 
-        @crewai_event_bus.on(AgentExecutionCompletedEvent)  # type: ignore[misc]
-        def on_agent_execution_completed(
-            _: Any, event: AgentExecutionCompletedEvent
-        ) -> None:
+        @crewai_event_bus.on(AgentExecutionCompletedEvent)
+        def on_agent_execution_completed(_: Any, event: Any) -> None:
             self.messages.append(AIMessage(content=event.output, tool_calls=[]))
 
-        @crewai_event_bus.on(ToolUsageStartedEvent)  # type: ignore[misc]
-        def on_tool_usage_started(_: Any, event: ToolUsageStartedEvent) -> None:
+        @crewai_event_bus.on(ToolUsageStartedEvent)
+        def on_tool_usage_started(_: Any, event: Any) -> None:
             # Its a tool call - add tool call to last AIMessage
             if len(self.messages) == 0:
                 logging.warning("Direct tool usage without agent invocation")
@@ -74,13 +68,17 @@ class CrewAIEventListener(BaseEventListener):  # type: ignore[misc]
                     "Tool call must be preceded by an AIMessage somewhere in the conversation."
                 )
                 return
-            tool_call = ToolCall(name=event.tool_name, args=json.loads(event.tool_args))
+            if isinstance(event.tool_args, (str, bytes, bytearray)):
+                parsed_args: Any = json.loads(event.tool_args)
+            else:
+                parsed_args = event.tool_args
+            tool_call = ToolCall(name=event.tool_name, args=parsed_args)
             if last_message.tool_calls is None:
                 last_message.tool_calls = []
             last_message.tool_calls.append(tool_call)
 
-        @crewai_event_bus.on(ToolUsageFinishedEvent)  # type: ignore[misc]
-        def on_tool_usage_finished(_: Any, event: ToolUsageFinishedEvent) -> None:
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def on_tool_usage_finished(_: Any, event: Any) -> None:
             if len(self.messages) == 0:
                 logging.warning("Direct tool usage without agent invocation")
                 return

@@ -17,6 +17,7 @@ from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
 from agent import MyAgent
+from crewai import CrewOutput
 from ragas.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
 
 
@@ -180,6 +181,7 @@ class TestMyAgentCrewAI:
             api_base="test_base",
             api_key="test_key",
             timeout=90,
+            stream=False,
         )
 
     @patch("agent.LLM")
@@ -193,6 +195,7 @@ class TestMyAgentCrewAI:
                 api_base="https://api.datarobot.com",
                 api_key="test_key",
                 timeout=90,
+                stream=False,
             )
 
     @patch("agent.Agent")
@@ -284,7 +287,7 @@ class TestMyAgentCrewAI:
 
     def test_run_method(self, agent):
         # Create a mock result with a raw attribute
-        mock_result = Mock()
+        mock_result = MagicMock(spec=CrewOutput)
         mock_result.raw = "success"
         mock_result.token_usage = Mock(
             completion_tokens=10,
