@@ -5,94 +5,50 @@ env:
   ENV: testing
 dotenv: ['.env', '.env.{{.ENV}}']
 vars:
-  HIDE: yes
+  COMPONENTS: agent_crewai agent_generic_base agent_langgraph agent_llamaindex infra
 includes:
-  agent_crewai:
-    taskfile: ./agent_crewai/Taskfile.yml
-    dir: ./agent_crewai/
-    internal: true
-  agent_generic_base:
-    taskfile: ./agent_generic_base/Taskfile.yml
-    dir: ./agent_generic_base/
-    internal: true
-  agent_langgraph:
-    taskfile: ./agent_langgraph/Taskfile.yml
-    dir: ./agent_langgraph/
-    internal: true
-  agent_llamaindex:
-    taskfile: ./agent_llamaindex/Taskfile.yml
-    dir: ./agent_llamaindex/
-    internal: true
-  agent_nat:
-    taskfile: ./agent_nat/Taskfile.yml
-    dir: ./agent_nat/
-    internal: true
+  development:
+    taskfile: ./Taskfile_development.yml
+    dir: .
+  execenv:
+    taskfile: ./Taskfile_execution_env.yml
+    dir: .
 tasks:
   default:
-    desc: "ℹ️ Show all available tasks (run `task --list-all` to see hidden tasks)"
+    desc: "Show all available tasks"
     cmds:
-      - task --list --sort none
+      - task --list
     silent: true
   start:
     desc: "‼️ Quickstart for DataRobot Agent Templates ‼️"
     cmds:
-      - dr self update
       - uv run quickstart.py
-      - rm quickstart.py
-      - dr task compose
-      - dr dotenv setup --if-needed
-      - dr dotenv update
-      - task install
-      - |
-        echo 'DataRobot agent templates provide you with several CLI tools to help you manage your agent development and deployment.
-
-        For more information please go to:
-          https://docs.datarobot.com/en/docs/agentic-ai/agentic-develop/index.html
-
-        You can also run the following command for a list of actions:
-          > task
-        You can refresh your environment at any time by running:
-          > task install'
   install:
     desc: "Install dependencies for all agent components and infra"
     cmds:
-      - echo "Updating dependencies for all agents"
-      - task: agent_crewai:install
-      - task: agent_generic_base:install
-      - task: agent_langgraph:install
-      - task: agent_llamaindex:install
-      - task: agent_nat:install
-      - echo "Updating infra dependencies"
-      - cd ./infra && uv sync --all-extras
+      - for: { var: COMPONENTS }
+        cmd: task --dir {{.ITEM}} req
     silent: true
     aliases:
       - req
       - install-all
   update:
-    # DESC IS HIDDEN TO AVOID SHOWING IN TASK LIST, run `task --list-all` TO SEE IT
-    # desc: "Update all dependencies for all agent components and infra (refresh uv locks){{ end }}"
+    desc: "Update all dependencies for all agent components and infra (refresh uv locks)"
     cmds:
-      - echo "Updating dependencies for all agents"
-      - task: agent_crewai:update
-      - task: agent_generic_base:update
-      - task: agent_langgraph:update
-      - task: agent_llamaindex:update
-      - task: agent_nat:update
-      - echo "Updating infra dependencies"
-      - cd ./infra && uv sync --all-extras -U
+      - for: { var: COMPONENTS }
+        cmd: task --dir {{.ITEM}} update
     silent: true
     aliases:
       - update-all
   lint:
-    # DESC IS HIDDEN TO AVOID SHOWING IN TASK LIST, run `task --list-all` TO SEE IT
-    # desc: "Lint all agent components and infra"
+    desc: "Lint all agent components and infra"
     cmds:
-      - echo "Linting all templates"
-      - task: agent_crewai:lint
-      - task: agent_generic_base:lint
-      - task: agent_langgraph:lint
-      - task: agent_llamaindex:lint
-      - task: agent_nat:lint
-      - echo "Linting infra"
-      - cd ./infra && uv run ruff check . --fix && uv run ruff format .
+      - for: { var: COMPONENTS }
+        cmd: task --dir {{.ITEM}} lint
+    silent: true
+  test_api_tests:
+    desc: "Run API tests"
+    cmds:
+      - echo "Running pytest on api_tests"
+      - cd ./api_tests && uv run pytest -vv -s ./api_tests/
     silent: true
