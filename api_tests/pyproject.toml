@@ -1,0 +1,16 @@
+[project]
+name = "datarobot-agents-templates-api-tests"
+version = "1.0.0"
+description = """
+This is a template for end to end testing DataRobot Agents.
+"""
+requires-python = ">=3.10"
+
+dependencies = [
+    "dotenv",
+    "mypy",
+    "pytest",
+    "requests>=2.32.4",
+    "ruff",
+    "types-requests>=2.32.0.20250602",
+]

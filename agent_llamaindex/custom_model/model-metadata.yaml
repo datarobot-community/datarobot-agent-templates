@@ -1,0 +1,8 @@
+---
+name: agent_llamaindex
+type: inference
+targetType: agenticworkflow
+runtimeParameterDefinitions:
+  - fieldName: LLM_DATAROBOT_DEPLOYMENT_ID
+    defaultValue: SET_VIA_PULUMI_OR_MANUALLY
+    type: string
